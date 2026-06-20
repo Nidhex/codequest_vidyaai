@@ -1,0 +1,3817 @@
+export const CURRICULUM_FALLBACK: Record<string, {
+  subjects: Record<string, {
+    chapters: Record<string, string[]>
+  }>
+}> = {
+  "1": {
+    "subjects": {
+      "Mathematics": {
+        "chapters": {
+          "Chapter 1: Shapes and Space": [
+            "Inside-Outside",
+            "Nearer-Farther",
+            "Rolling-Sliding",
+            "Shapes around us"
+          ],
+          "Chapter 2: Numbers from One to Nine": [
+            "Counting objects",
+            "More or Less",
+            "Writing digits",
+            "Number names"
+          ],
+          "Chapter 3: Addition": [
+            "One More",
+            "Addition of single digits",
+            "Addition word problems",
+            "Adding zero"
+          ],
+          "Chapter 4: Subtraction": [
+            "Taking away",
+            "Subtraction of single digits",
+            "Subtraction word problems",
+            "Subtracting zero"
+          ],
+          "Chapter 5: Numbers from Ten to Twenty": [
+            "Making groups of ten",
+            "Counting 10 to 20",
+            "Addition 10 to 20",
+            "Subtraction 10 to 20"
+          ],
+          "Chapter 6: Time": [
+            "Morning routine",
+            "Day and Night",
+            "Sequencing activities",
+            "Days of the week"
+          ],
+          "Chapter 7: Measurement": [
+            "Longer-Shorter",
+            "Longest-Shortest",
+            "Taller-Shorter",
+            "Thicker-Thinner"
+          ],
+          "Chapter 8: Numbers from Twenty-one to Fifty": [
+            "Counting 21 to 30",
+            "Counting 31 to 40",
+            "Counting 41 to 50",
+            "Place value up to 50"
+          ],
+          "Chapter 9: Data Handling": [
+            "Counting shapes in a picture",
+            "Naming objects",
+            "Finding most/least frequent"
+          ],
+          "Chapter 10: Patterns": [
+            "Extend the pattern",
+            "Identify missing shapes",
+            "Number patterns"
+          ]
+        }
+      },
+      "English": {
+        "chapters": {
+          "Chapter 1: Three Little Pigs": [
+            "Sharing and friendship",
+            "Types of houses",
+            "Building materials"
+          ],
+          "Chapter 2: A Happy Child": [
+            "Feelings and Emotions",
+            "Colors of Nature",
+            "Family members"
+          ],
+          "Chapter 3: After a Bath": [
+            "Personal hygiene",
+            "Body parts",
+            "Drying off"
+          ],
+          "Chapter 4: One Little Kitten": [
+            "Animal vocabulary",
+            "Numbers 1 to 15",
+            "Adjectives for feelings"
+          ],
+          "Chapter 5: Lalu and Peelu": [
+            "Colors (Red and Yellow)",
+            "Taste (Sweet and Spicy)",
+            "Motherhood"
+          ],
+          "Chapter 6: Once I Saw a Little Bird": [
+            "Bird movements",
+            "Simple prepositions",
+            "Window dialogue"
+          ],
+          "Chapter 7: Merry-Go-Round": [
+            "Playground rides",
+            "Up and down motions",
+            "Round and round directions"
+          ],
+          "Chapter 8: Circle": [
+            "Drawing shapes",
+            "Balloons and wheels",
+            "Art activity"
+          ],
+          "Chapter 9: Our Tree": [
+            "Plants and fruits",
+            "Birds nesting",
+            "Rain and growth"
+          ],
+          "Chapter 10: Flying-Man": [
+            "Superheroes",
+            "Sky travel",
+            "Action verbs"
+          ]
+        }
+      },
+      "Hindi": {
+        "chapters": {
+          "Chapter 1: झूला": [
+            "कविता वाचन",
+            "झूले के प्रकार",
+            "समानार्थी शब्द"
+          ],
+          "Chapter 2: आम की कहानी": [
+            "चित्र कथा",
+            "फलों के नाम",
+            "मात्रा ज्ञान"
+          ],
+          "Chapter 3: आम की टोकरी": [
+            "फलों की पहचान",
+            "गिनती 1 से 6",
+            "छह साल की छोकरी"
+          ],
+          "Chapter 4: पत्ते ही पत्ते": [
+            "पत्तियों के रंग और आकार",
+            "स्पर्श ज्ञान",
+            "पेड़-पौधे"
+          ],
+          "Chapter 5: पकौड़ी": [
+            "स्वाद पहचान",
+            "व्यंजन निर्माण",
+            "पकौड़ी कविता"
+          ],
+          "Chapter 6: छुक-छुक गाड़ी": [
+            "यातायात के साधन",
+            "रेलगाड़ी की सवारी",
+            "कविता पठन"
+          ],
+          "Chapter 7: रसोईघर": [
+            "रसोई के उपकरण",
+            "सब्जी काटना",
+            "बर्तन"
+          ],
+          "Chapter 8: चूहो! म्याऊँ सो रही है": [
+            "चूहा-बिल्ली खेल",
+            "तुकबंदी",
+            "हास्य कविता"
+          ],
+          "Chapter 9: बंदर और गिलहरी": [
+            "पशुओं का भाईचारा",
+            "शरारत का परिणाम",
+            "कहानी वाचन"
+          ],
+          "Chapter 10: पगड़ी": [
+            "सफाई और मेहनत",
+            "पगड़ी बाँधना",
+            "रंग-बिरंगी पगड़ी"
+          ]
+        }
+      },
+      "Computer": {
+        "chapters": {
+          "Chapter 1: Introduction to Computers": [
+            "What is a machine?",
+            "Computers as smart machines",
+            "Types of computers"
+          ],
+          "Chapter 2: Parts of a Computer": [
+            "Monitor screen",
+            "CPU brain",
+            "Keyboard keys",
+            "Mouse pointer"
+          ],
+          "Chapter 3: Computer Keyboard": [
+            "Alphabet keys",
+            "Number keys",
+            "Spacebar and Enter key",
+            "Backspace"
+          ],
+          "Chapter 4: Using a Computer Mouse": [
+            "Left click and Right click",
+            "Double click",
+            "Drag and drop",
+            "Mouse pad"
+          ],
+          "Chapter 5: Drawing with MS Paint": [
+            "Pencil tool",
+            "Eraser tool",
+            "Color palette",
+            "Shapes selector"
+          ],
+          "Chapter 6: Tux Paint Basics": [
+            "Magic tool",
+            "Stamps",
+            "Open and Save",
+            "Drawing canvas"
+          ],
+          "Chapter 7: Introduction to Notepad": [
+            "Opening notepad",
+            "Typing sentences",
+            "Saving document",
+            "Closing notepad"
+          ],
+          "Chapter 8: Data and Storage": [
+            "What is data?",
+            "Saving files",
+            "Folder creation",
+            "Naming files"
+          ],
+          "Chapter 9: Safe Computer Usage": [
+            "Posture at computer",
+            "Taking breaks",
+            "Keeping liquid away",
+            "Dusting computer"
+          ],
+          "Chapter 10: Fun with Keyboard Shortcuts": [
+            "Ctrl + C",
+            "Ctrl + V",
+            "Ctrl + S",
+            "Alt + F4"
+          ]
+        }
+      }
+    }
+  },
+  "2": {
+    "subjects": {
+      "Mathematics": {
+        "chapters": {
+          "Chapter 1: General Numbers and Patterns": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 2: Basic Operations and Functions": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 3: Algebraic Structures and Formulas": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 4: Geometry and Coordinate Systems": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 5: Measurement of Length and Area": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 6: Data Interpretation and Graphs": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 7: Fractions, Decimals, and Ratios": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 8: Ratios and Percentage Applications": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 9: Equations Solving Mechanics": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 10: Advanced Mathematical Theorems": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ]
+        }
+      },
+      "English": {
+        "chapters": {
+          "Chapter 1: Morning Song and Greetings": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 2: Stories of Brave Friends": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 3: Nature and Green Fields": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 4: Travel Diaries around the Globe": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 5: Humorous Tales and Jokes": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 6: Inspirational Achievements": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 7: Legends and Ancient Fables": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 8: Personal Health and Daily Habits": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 9: Animal Kingdoms and Wildlife": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 10: Bright Tomorrows and Leadership": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ]
+        }
+      },
+      "Hindi": {
+        "chapters": {
+          "Chapter 1: सवेरा और नई उमंग": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 2: सच्चे मित्र की कहानी": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 3: हमारे पेड़-पौधे और हरियाली": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 4: भारत के गौरवशाली त्योहार": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 5: वीर सेनानी और साहस": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 6: पंचतंत्र की हितकारी नीति": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 7: खेल-कूद और उत्तम स्वास्थ्य": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 8: गाँव की सुंदर संस्कृति": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 9: एकता में ही अटूट शक्ति": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 10: परिश्रम का मीठा फल": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ]
+        }
+      },
+      "Computer": {
+        "chapters": {
+          "Chapter 1: Smart Computational Machines": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 2: Internal Structure and Architecture": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 3: Command Lines and Operating Systems": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 4: Document Formatting Wizards": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 5: Presentation slide designers": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 6: Data Analysis and Spreadsheet basics": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 7: Safe Internet browsing rules": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 8: Logical flowcharts and pseudo-models": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 9: Software algorithms and coding syntax": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 10: Information security and firewall rules": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ]
+        }
+      }
+    }
+  },
+  "3": {
+    "subjects": {
+      "EVS": {
+        "chapters": {
+          "Chapter 1: Poonam's Day Out and Habitats": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 2: The Plant Fairy and Herbal Medicine": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 3: Every Drop Counts - Water Scarcity": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 4: Our Neighborhood and Clean Environment": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 5: Regional Transport and Bridges": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 6: Animals": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 7: Foods We Cook and Digestion": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 8: Family bonding and Relationships": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 9: Seasons, Rains and Agriculture": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 10: Earth, Sky and Celestial Bodies": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ]
+        }
+      },
+      "Mathematics": {
+        "chapters": {
+          "Chapter 1: General Numbers and Patterns": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 2: Basic Operations and Functions": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 3: Algebraic Structures and Formulas": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 4: Geometry and Coordinate Systems": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 5: Measurement of Length and Area": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 6: Data Interpretation and Graphs": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 7: Fractions, Decimals, and Ratios": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 8: Ratios and Percentage Applications": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 9: Equations Solving Mechanics": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 10: Advanced Mathematical Theorems": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ]
+        }
+      },
+      "English": {
+        "chapters": {
+          "Chapter 1: Morning Song and Greetings": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 2: Stories of Brave Friends": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 3: Nature and Green Fields": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 4: Travel Diaries around the Globe": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 5: Humorous Tales and Jokes": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 6: Inspirational Achievements": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 7: Legends and Ancient Fables": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 8: Personal Health and Daily Habits": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 9: Animal Kingdoms and Wildlife": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 10: Bright Tomorrows and Leadership": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ]
+        }
+      },
+      "Hindi": {
+        "chapters": {
+          "Chapter 1: सवेरा और नई उमंग": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 2: सच्चे मित्र की कहानी": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 3: हमारे पेड़-पौधे और हरियाली": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 4: भारत के गौरवशाली त्योहार": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 5: वीर सेनानी और साहस": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 6: पंचतंत्र की हितकारी नीति": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 7: खेल-कूद और उत्तम स्वास्थ्य": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 8: गाँव की सुंदर संस्कृति": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 9: एकता में ही अटूट शक्ति": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 10: परिश्रम का मीठा फल": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ]
+        }
+      },
+      "Computer": {
+        "chapters": {
+          "Chapter 1: Smart Computational Machines": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 2: Internal Structure and Architecture": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 3: Command Lines and Operating Systems": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 4: Document Formatting Wizards": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 5: Presentation slide designers": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 6: Data Analysis and Spreadsheet basics": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 7: Safe Internet browsing rules": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 8: Logical flowcharts and pseudo-models": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 9: Software algorithms and coding syntax": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 10: Information security and firewall rules": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ]
+        }
+      }
+    }
+  },
+  "4": {
+    "subjects": {
+      "EVS": {
+        "chapters": {
+          "Chapter 1: Poonam's Day Out and Habitats": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 2: The Plant Fairy and Herbal Medicine": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 3: Every Drop Counts - Water Scarcity": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 4: Our Neighborhood and Clean Environment": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 5: Regional Transport and Bridges": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 6: Animals": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 7: Foods We Cook and Digestion": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 8: Family bonding and Relationships": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 9: Seasons, Rains and Agriculture": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 10: Earth, Sky and Celestial Bodies": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ]
+        }
+      },
+      "Mathematics": {
+        "chapters": {
+          "Chapter 1: General Numbers and Patterns": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 2: Basic Operations and Functions": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 3: Algebraic Structures and Formulas": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 4: Geometry and Coordinate Systems": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 5: Measurement of Length and Area": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 6: Data Interpretation and Graphs": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 7: Fractions, Decimals, and Ratios": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 8: Ratios and Percentage Applications": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 9: Equations Solving Mechanics": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 10: Advanced Mathematical Theorems": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ]
+        }
+      },
+      "English": {
+        "chapters": {
+          "Chapter 1: Morning Song and Greetings": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 2: Stories of Brave Friends": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 3: Nature and Green Fields": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 4: Travel Diaries around the Globe": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 5: Humorous Tales and Jokes": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 6: Inspirational Achievements": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 7: Legends and Ancient Fables": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 8: Personal Health and Daily Habits": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 9: Animal Kingdoms and Wildlife": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 10: Bright Tomorrows and Leadership": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ]
+        }
+      },
+      "Hindi": {
+        "chapters": {
+          "Chapter 1: सवेरा और नई उमंग": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 2: सच्चे मित्र की कहानी": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 3: हमारे पेड़-पौधे और हरियाली": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 4: भारत के गौरवशाली त्योहार": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 5: वीर सेनानी और साहस": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 6: पंचतंत्र की हितकारी नीति": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 7: खेल-कूद और उत्तम स्वास्थ्य": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 8: गाँव की सुंदर संस्कृति": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 9: एकता में ही अटूट शक्ति": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 10: परिश्रम का मीठा फल": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ]
+        }
+      },
+      "Computer": {
+        "chapters": {
+          "Chapter 1: Smart Computational Machines": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 2: Internal Structure and Architecture": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 3: Command Lines and Operating Systems": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 4: Document Formatting Wizards": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 5: Presentation slide designers": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 6: Data Analysis and Spreadsheet basics": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 7: Safe Internet browsing rules": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 8: Logical flowcharts and pseudo-models": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 9: Software algorithms and coding syntax": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 10: Information security and firewall rules": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ]
+        }
+      }
+    }
+  },
+  "5": {
+    "subjects": {
+      "EVS": {
+        "chapters": {
+          "Chapter 1: Poonam's Day Out and Habitats": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 2: The Plant Fairy and Herbal Medicine": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 3: Every Drop Counts - Water Scarcity": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 4: Our Neighborhood and Clean Environment": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 5: Regional Transport and Bridges": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 6: Animals": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 7: Foods We Cook and Digestion": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 8: Family bonding and Relationships": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 9: Seasons, Rains and Agriculture": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 10: Earth, Sky and Celestial Bodies": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ]
+        }
+      },
+      "Mathematics": {
+        "chapters": {
+          "Chapter 1: General Numbers and Patterns": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 2: Basic Operations and Functions": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 3: Algebraic Structures and Formulas": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 4: Geometry and Coordinate Systems": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 5: Measurement of Length and Area": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 6: Data Interpretation and Graphs": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 7: Fractions, Decimals, and Ratios": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 8: Ratios and Percentage Applications": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 9: Equations Solving Mechanics": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 10: Advanced Mathematical Theorems": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ]
+        }
+      },
+      "English": {
+        "chapters": {
+          "Chapter 1: Morning Song and Greetings": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 2: Stories of Brave Friends": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 3: Nature and Green Fields": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 4: Travel Diaries around the Globe": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 5: Humorous Tales and Jokes": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 6: Inspirational Achievements": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 7: Legends and Ancient Fables": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 8: Personal Health and Daily Habits": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 9: Animal Kingdoms and Wildlife": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 10: Bright Tomorrows and Leadership": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ]
+        }
+      },
+      "Hindi": {
+        "chapters": {
+          "Chapter 1: सवेरा और नई उमंग": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 2: सच्चे मित्र की कहानी": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 3: हमारे पेड़-पौधे और हरियाली": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 4: भारत के गौरवशाली त्योहार": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 5: वीर सेनानी और साहस": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 6: पंचतंत्र की हितकारी नीति": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 7: खेल-कूद और उत्तम स्वास्थ्य": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 8: गाँव की सुंदर संस्कृति": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 9: एकता में ही अटूट शक्ति": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 10: परिश्रम का मीठा फल": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ]
+        }
+      },
+      "Computer": {
+        "chapters": {
+          "Chapter 1: Smart Computational Machines": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 2: Internal Structure and Architecture": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 3: Command Lines and Operating Systems": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 4: Document Formatting Wizards": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 5: Presentation slide designers": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 6: Data Analysis and Spreadsheet basics": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 7: Safe Internet browsing rules": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 8: Logical flowcharts and pseudo-models": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 9: Software algorithms and coding syntax": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 10: Information security and firewall rules": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ]
+        }
+      }
+    }
+  },
+  "6": {
+    "subjects": {
+      "Science": {
+        "chapters": {
+          "Chapter 1: Food and nutritional elements": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 2: Components and balanced diets": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 3: Sorting materials by physical states": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 4: Separation of mixed substances": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 5: Physical and Chemical Changes": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 6: Knowing local plants and herbs": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 7: Structural skeletal movements": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 8: Organisms and adaptation rules": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 9: Motion, Speed and length scale": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 10: Electricity, wires and simple circuits": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ]
+        }
+      },
+      "Mathematics": {
+        "chapters": {
+          "Chapter 1: General Numbers and Patterns": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 2: Basic Operations and Functions": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 3: Algebraic Structures and Formulas": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 4: Geometry and Coordinate Systems": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 5: Measurement of Length and Area": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 6: Data Interpretation and Graphs": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 7: Fractions, Decimals, and Ratios": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 8: Ratios and Percentage Applications": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 9: Equations Solving Mechanics": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 10: Advanced Mathematical Theorems": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ]
+        }
+      },
+      "Social Science": {
+        "chapters": {
+          "Chapter 1: What, Where, How and Historical timelines": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 2: Earliest cities and architecture": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 3: Ancient books and cultural details": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 4: Empires, Kings and early Republics": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 5: Emperors, Wars and spiritual changes": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 6: Rural administrative operations": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 7: Diversity and constitutional rights": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 8: Local Government and Panchayati Raj": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 9: Natural resources and human life": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 10: Trade channels and world networks": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ]
+        }
+      },
+      "English": {
+        "chapters": {
+          "Chapter 1: Morning Song and Greetings": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 2: Stories of Brave Friends": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 3: Nature and Green Fields": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 4: Travel Diaries around the Globe": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 5: Humorous Tales and Jokes": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 6: Inspirational Achievements": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 7: Legends and Ancient Fables": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 8: Personal Health and Daily Habits": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 9: Animal Kingdoms and Wildlife": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 10: Bright Tomorrows and Leadership": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ]
+        }
+      },
+      "Hindi": {
+        "chapters": {
+          "Chapter 1: सवेरा और नई उमंग": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 2: सच्चे मित्र की कहानी": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 3: हमारे पेड़-पौधे और हरियाली": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 4: भारत के गौरवशाली त्योहार": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 5: वीर सेनानी और साहस": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 6: पंचतंत्र की हितकारी नीति": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 7: खेल-कूद और उत्तम स्वास्थ्य": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 8: गाँव की सुंदर संस्कृति": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 9: एकता में ही अटूट शक्ति": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 10: परिश्रम का मीठा फल": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ]
+        }
+      },
+      "Computer": {
+        "chapters": {
+          "Chapter 1: Smart Computational Machines": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 2: Internal Structure and Architecture": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 3: Command Lines and Operating Systems": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 4: Document Formatting Wizards": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 5: Presentation slide designers": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 6: Data Analysis and Spreadsheet basics": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 7: Safe Internet browsing rules": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 8: Logical flowcharts and pseudo-models": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 9: Software algorithms and coding syntax": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 10: Information security and firewall rules": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ]
+        }
+      }
+    }
+  },
+  "7": {
+    "subjects": {
+      "Science": {
+        "chapters": {
+          "Chapter 1: Food and nutritional elements": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 2: Components and balanced diets": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 3: Sorting materials by physical states": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 4: Separation of mixed substances": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 5: Physical and Chemical Changes": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 6: Knowing local plants and herbs": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 7: Structural skeletal movements": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 8: Organisms and adaptation rules": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 9: Motion, Speed and length scale": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 10: Electricity, wires and simple circuits": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ]
+        }
+      },
+      "Mathematics": {
+        "chapters": {
+          "Chapter 1: General Numbers and Patterns": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 2: Basic Operations and Functions": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 3: Algebraic Structures and Formulas": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 4: Geometry and Coordinate Systems": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 5: Measurement of Length and Area": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 6: Data Interpretation and Graphs": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 7: Fractions, Decimals, and Ratios": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 8: Ratios and Percentage Applications": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 9: Equations Solving Mechanics": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 10: Advanced Mathematical Theorems": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ]
+        }
+      },
+      "Social Science": {
+        "chapters": {
+          "Chapter 1: What, Where, How and Historical timelines": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 2: Earliest cities and architecture": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 3: Ancient books and cultural details": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 4: Empires, Kings and early Republics": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 5: Emperors, Wars and spiritual changes": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 6: Rural administrative operations": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 7: Diversity and constitutional rights": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 8: Local Government and Panchayati Raj": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 9: Natural resources and human life": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 10: Trade channels and world networks": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ]
+        }
+      },
+      "English": {
+        "chapters": {
+          "Chapter 1: Morning Song and Greetings": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 2: Stories of Brave Friends": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 3: Nature and Green Fields": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 4: Travel Diaries around the Globe": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 5: Humorous Tales and Jokes": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 6: Inspirational Achievements": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 7: Legends and Ancient Fables": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 8: Personal Health and Daily Habits": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 9: Animal Kingdoms and Wildlife": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 10: Bright Tomorrows and Leadership": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ]
+        }
+      },
+      "Hindi": {
+        "chapters": {
+          "Chapter 1: सवेरा और नई उमंग": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 2: सच्चे मित्र की कहानी": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 3: हमारे पेड़-पौधे और हरियाली": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 4: भारत के गौरवशाली त्योहार": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 5: वीर सेनानी और साहस": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 6: पंचतंत्र की हितकारी नीति": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 7: खेल-कूद और उत्तम स्वास्थ्य": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 8: गाँव की सुंदर संस्कृति": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 9: एकता में ही अटूट शक्ति": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 10: परिश्रम का मीठा फल": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ]
+        }
+      },
+      "Computer": {
+        "chapters": {
+          "Chapter 1: Smart Computational Machines": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 2: Internal Structure and Architecture": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 3: Command Lines and Operating Systems": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 4: Document Formatting Wizards": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 5: Presentation slide designers": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 6: Data Analysis and Spreadsheet basics": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 7: Safe Internet browsing rules": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 8: Logical flowcharts and pseudo-models": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 9: Software algorithms and coding syntax": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 10: Information security and firewall rules": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ]
+        }
+      }
+    }
+  },
+  "8": {
+    "subjects": {
+      "Science": {
+        "chapters": {
+          "Chapter 1: Crop Production and Management": [
+            "Agricultural implements",
+            "Drip irrigation and Sprinklers",
+            "Organic manure vs Fertilizers"
+          ],
+          "Chapter 2: Microorganisms: Friend and Foe": [
+            "Lactobacillus in curd",
+            "Antibiotics and Vaccines",
+            "Food poisoning microbes"
+          ],
+          "Chapter 3: Synthetic Fibres and Plastics": [
+            "Nylon and Polyester",
+            "Thermoplastics vs Thermosetting",
+            "Environmental impact of plastics"
+          ],
+          "Chapter 4: Materials: Metals and Non-Metals": [
+            "Malleability and Ductility",
+            "Reaction with acids and bases",
+            "Displacement reactions"
+          ],
+          "Chapter 5: Coal and Petroleum": [
+            "Fossil fuel formation",
+            "Refining of petroleum",
+            "Natural gas conservation"
+          ],
+          "Chapter 6: Combustion and Flame": [
+            "Conditions for combustion",
+            "Structure of a flame",
+            "Fire control methods"
+          ],
+          "Chapter 7: Conservation of Plants and Animals": [
+            "Deforestation causes",
+            "Biosphere reserves",
+            "Endemic and Endangered species"
+          ],
+          "Chapter 8: Cell - Structure and Functions": [
+            "Discovery of cell",
+            "Plant vs Animal cell",
+            "Functions of organelles"
+          ],
+          "Chapter 9: Reproduction in Animals": [
+            "Sexual reproduction",
+            "Internal vs External fertilization",
+            "Asexual reproduction in hydra"
+          ],
+          "Chapter 10: Reaching the Age of Adolescence": [
+            "Changes at puberty",
+            "Role of hormones",
+            "Reproductive health and hygiene"
+          ],
+          "Chapter 11: Force and Pressure": [
+            "Contact and Non-contact forces",
+            "Pressure in fluids",
+            "Atmospheric pressure"
+          ],
+          "Chapter 12: Friction": [
+            "Factors affecting friction",
+            "Friction as a necessary evil",
+            "Reducing friction with ball bearings"
+          ]
+        }
+      },
+      "Mathematics": {
+        "chapters": {
+          "Chapter 1: Rational Numbers": [
+            "Rational numbers on number lines",
+            "Distributive property",
+            "Additive and Multiplicative inverse"
+          ],
+          "Chapter 2: Linear Equations in One Variable": [
+            "Solving variable equations",
+            "Solving word problems",
+            "Equations with variables on both sides"
+          ],
+          "Chapter 3: Understanding Quadrilaterals": [
+            "Polygons classification",
+            "Sum of interior angles",
+            "Properties of parallelogram"
+          ],
+          "Chapter 4: Practical Geometry": [
+            "Constructing a quadrilateral",
+            "Given four sides and a diagonal",
+            "Special cases construction"
+          ],
+          "Chapter 5: Data Handling": [
+            "Organising data in intervals",
+            "Bar graphs and Double bar graphs",
+            "Pie charts and Probability"
+          ],
+          "Chapter 6: Squares and Square Roots": [
+            "Properties of square numbers",
+            "Finding square root by prime factorisation",
+            "Long division method"
+          ],
+          "Chapter 7: Cubes and Cube Roots": [
+            "Cube numbers",
+            "Prime factorisation for cube roots",
+            "Estimation method"
+          ],
+          "Chapter 8: Comparing Quantities": [
+            "Ratios and Percentages",
+            "Discount and Profit/Loss",
+            "Compound interest formula"
+          ],
+          "Chapter 9: Algebraic Expressions and Identities": [
+            "Monomials, Binomials, Polynomials",
+            "Multiplying expressions",
+            "Standard algebraic identities"
+          ],
+          "Chapter 10: Mensuration": [
+            "Area of trapezium and polygon",
+            "Surface area of cube, cuboid, cylinder",
+            "Volume of solid figures"
+          ]
+        }
+      },
+      "Social Science": {
+        "chapters": {
+          "Chapter 1: How, When and Where": [
+            "Importance of dates",
+            "Official records of British admin",
+            "Periodization by James Mill"
+          ],
+          "Chapter 2: From Trade to Territory": [
+            "East India Company arrivals",
+            "Battle of Plassey",
+            "Doctrine of Lapse"
+          ],
+          "Chapter 3: Ruling the Countryside": [
+            "Permanent Settlement system",
+            "Ryotwari and Mahalwari system",
+            "Blue rebellion (Indigo)"
+          ],
+          "Chapter 4: Tribals, Dikus and the Golden Age": [
+            "Jhum cultivators lifestyle",
+            "Birsa Munda rebellion",
+            "Impact of forest laws"
+          ],
+          "Chapter 5: When People Rebel": [
+            "Mutiny of 1857 causes",
+            "Spread of the rebellion",
+            "Aftermath of the revolt"
+          ],
+          "Chapter 6: Colonisation and the City": [
+            "De-urbanisation in India",
+            "Story of Delhi",
+            "Municipal planning under British"
+          ],
+          "Chapter 7: Weavers, Iron Smelters and Owners": [
+            "Indian textiles in world markets",
+            "Decline of Indian handlooms",
+            "TISCO setup"
+          ],
+          "Chapter 8: Civilising the Native": [
+            "Thomas Macaulay and Anglicists",
+            "Wood's Despatch",
+            "Tagore's Shantiniketan"
+          ],
+          "Chapter 9: Women, Caste and Reform": [
+            "Sati abolition (Ram Mohan Roy)",
+            "Widow remarriage Act",
+            "Jyotirao Phule's Satyashodhak Samaj"
+          ],
+          "Chapter 10: The Making of the National Movement": [
+            "Partition of Bengal 1905",
+            "Rowlatt Satyagraha & Jallianwala Bagh",
+            "Quit India Movement"
+          ]
+        }
+      },
+      "English": {
+        "chapters": {
+          "Chapter 1: The Best Christmas Present in the World": [
+            "World War I Christmas truce",
+            "Letter writing format",
+            "War impact on families"
+          ],
+          "Chapter 2: The Tsunami": [
+            "Real survival stories",
+            "Animal warning behaviors",
+            "Geological forces"
+          ],
+          "Chapter 3: Glimpses of the Past": [
+            "British rule in India",
+            "Social reform movements",
+            "Revolt of 1857 pictorial"
+          ],
+          "Chapter 4: Bepin Choudhury's Lapse of Memory": [
+            "Suspense and practical jokes",
+            "Mental health & memory",
+            "True friendship"
+          ],
+          "Chapter 5: The Summit Within": [
+            "Climbing Mount Everest",
+            "Mental obstacles",
+            "Spiritual peak"
+          ],
+          "Chapter 6: This is Jody's Fawn": [
+            "Compassion for wildlife",
+            "Forest eco-balance",
+            "Parental advice"
+          ],
+          "Chapter 7: A Visit to Cambridge": [
+            "Stephen Hawking interview",
+            "Disabled achievers",
+            "Human potential"
+          ],
+          "Chapter 8: A Short Monsoon Diary": [
+            "Nature observations in Mussoorie",
+            "Flora and fauna",
+            "Changing seasons"
+          ],
+          "Chapter 9: The Great Stone Face I": [
+            "Prophecies and legends",
+            "Ernest character growth",
+            "Nature comparisons"
+          ],
+          "Chapter 10: The Great Stone Face II": [
+            "Meeting the poet",
+            "Fulfillment of prophecy",
+            "Humility values"
+          ]
+        }
+      },
+      "Hindi": {
+        "chapters": {
+          "Chapter 1: ध्वनि": [
+            "युवाओं में नई चेतना",
+            "सकारात्मक दृष्टिकोण",
+            "वसंत ऋतु का आगमन"
+          ],
+          "Chapter 2: लाख की चूड़ियाँ": [
+            "मशीनीकरण का प्रभाव",
+            "कुटीर उद्योग की स्थिति",
+            "बदलू का स्वाभिमान"
+          ],
+          "Chapter 3: बस की यात्रा": [
+            "यातायात की जर्जर स्थिति",
+            "व्यंग्य शैली",
+            "यात्रा के अनुभव"
+          ],
+          "Chapter 4: दीवानों की हस्ती": [
+            "मस्तमौला जीवन",
+            "देशभक्ति की भावना",
+            "सुख-दुख में समभाव"
+          ],
+          "Chapter 5: चिट्ठियों की अनूठी दुनिया": [
+            "पत्रों का इतिहास",
+            "संचार के साधनों का विकास",
+            "साहित्यिक महत्व"
+          ],
+          "Chapter 6: भगवान के डाकिए": [
+            "पक्षी और बादल का संदेश",
+            "प्राकृतिक एकता",
+            "राष्ट्रों की सीमा से परे"
+          ],
+          "Chapter 7: क्या निराश हुआ जाए": [
+            "नैतिक मूल्यों का ह्रास",
+            "आशा की किरण",
+            "सच्ची ईमानदारी"
+          ],
+          "Chapter 8: यह सबसे कठिन समय नहीं": [
+            "आशावादी दृष्टिकोण",
+            "रेलगाड़ी और घोंसले के उदाहरण",
+            "आगे बढ़ना"
+          ],
+          "Chapter 9: कबीर की साखियाँ": [
+            "ज्ञान की बातें",
+            "वाणी की मधुरता",
+            "सच्ची भक्ति"
+          ],
+          "Chapter 10: कामचोर": [
+            "पारिवारिक अनुशासन",
+            "बच्चों की शरारत",
+            "घरेलू कामकाज"
+          ]
+        }
+      },
+      "Computer": {
+        "chapters": {
+          "Chapter 1: Computer Languages and Coding": [
+            "Machine and Assembly languages",
+            "High level languages compiler",
+            "Binary code logic"
+          ],
+          "Chapter 2: Introduction to Windows 10": [
+            "File explorer navigation",
+            "Cortana voice assistant",
+            "Control panel configuration"
+          ],
+          "Chapter 3: Formatting in MS Word": [
+            "Styles and Themes",
+            "Page borders and headers",
+            "Watermarks and page color"
+          ],
+          "Chapter 4: Advanced Features of MS Word": [
+            "Mail merge wizard",
+            "Insert macros",
+            "Track changes collaboration"
+          ],
+          "Chapter 5: Microsoft PowerPoint Basics": [
+            "Slide templates",
+            "Transitions and Animations",
+            "Slide show options"
+          ],
+          "Chapter 6: Introduction to MS Excel": [
+            "Worksheet structure",
+            "Basic formulas (SUM, AVERAGE)",
+            "Inserting charts"
+          ],
+          "Chapter 7: Internet and Email Safety": [
+            "Phishing emails detection",
+            "Strong passwords creation",
+            "Safe browsing practices"
+          ],
+          "Chapter 8: Algorithmic Thinking": [
+            "Defining algorithms",
+            "Flowchart symbols",
+            "Pseudocode structure"
+          ],
+          "Chapter 9: Introduction to Scratch Programming": [
+            "Sprites movements",
+            "Sound blocks",
+            "Conditionals (If-Else) in Scratch"
+          ],
+          "Chapter 10: Cybersecurity Foundations": [
+            "Malware and Antivirus",
+            "Firewalls protection",
+            "Data privacy basics"
+          ]
+        }
+      }
+    }
+  },
+  "9": {
+    "subjects": {
+      "Science": {
+        "chapters": {
+          "Chapter 1: Food and nutritional elements": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 2: Components and balanced diets": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 3: Sorting materials by physical states": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 4: Separation of mixed substances": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 5: Physical and Chemical Changes": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 6: Knowing local plants and herbs": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 7: Structural skeletal movements": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 8: Organisms and adaptation rules": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 9: Motion, Speed and length scale": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 10: Electricity, wires and simple circuits": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ]
+        }
+      },
+      "Mathematics": {
+        "chapters": {
+          "Chapter 1: General Numbers and Patterns": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 2: Basic Operations and Functions": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 3: Algebraic Structures and Formulas": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 4: Geometry and Coordinate Systems": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 5: Measurement of Length and Area": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 6: Data Interpretation and Graphs": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 7: Fractions, Decimals, and Ratios": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 8: Ratios and Percentage Applications": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 9: Equations Solving Mechanics": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 10: Advanced Mathematical Theorems": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ]
+        }
+      },
+      "Social Science": {
+        "chapters": {
+          "Chapter 1: What, Where, How and Historical timelines": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 2: Earliest cities and architecture": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 3: Ancient books and cultural details": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 4: Empires, Kings and early Republics": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 5: Emperors, Wars and spiritual changes": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 6: Rural administrative operations": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 7: Diversity and constitutional rights": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 8: Local Government and Panchayati Raj": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 9: Natural resources and human life": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 10: Trade channels and world networks": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ]
+        }
+      },
+      "English": {
+        "chapters": {
+          "Chapter 1: Morning Song and Greetings": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 2: Stories of Brave Friends": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 3: Nature and Green Fields": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 4: Travel Diaries around the Globe": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 5: Humorous Tales and Jokes": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 6: Inspirational Achievements": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 7: Legends and Ancient Fables": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 8: Personal Health and Daily Habits": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 9: Animal Kingdoms and Wildlife": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 10: Bright Tomorrows and Leadership": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ]
+        }
+      },
+      "Hindi": {
+        "chapters": {
+          "Chapter 1: सवेरा और नई उमंग": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 2: सच्चे मित्र की कहानी": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 3: हमारे पेड़-पौधे और हरियाली": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 4: भारत के गौरवशाली त्योहार": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 5: वीर सेनानी और साहस": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 6: पंचतंत्र की हितकारी नीति": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 7: खेल-कूद और उत्तम स्वास्थ्य": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 8: गाँव की सुंदर संस्कृति": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 9: एकता में ही अटूट शक्ति": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 10: परिश्रम का मीठा फल": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ]
+        }
+      },
+      "Computer": {
+        "chapters": {
+          "Chapter 1: Smart Computational Machines": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 2: Internal Structure and Architecture": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 3: Command Lines and Operating Systems": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 4: Document Formatting Wizards": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 5: Presentation slide designers": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 6: Data Analysis and Spreadsheet basics": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 7: Safe Internet browsing rules": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 8: Logical flowcharts and pseudo-models": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 9: Software algorithms and coding syntax": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 10: Information security and firewall rules": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ]
+        }
+      }
+    }
+  },
+  "10": {
+    "subjects": {
+      "Science": {
+        "chapters": {
+          "Chapter 1: Chemical Reactions and Equations": [
+            "Balancing chemical equations",
+            "Combination and Decomposition",
+            "Corrosion and Rancidity"
+          ],
+          "Chapter 2: Acids, Bases and Salts": [
+            "pH scale in daily life",
+            "Neutralization reactions",
+            "Chlor-alkali process"
+          ],
+          "Chapter 3: Metals and Non-Metals": [
+            "Physical properties comparison",
+            "Reactivity series",
+            "Extraction of metals (Metallurgy)"
+          ],
+          "Chapter 4: Carbon and its Compounds": [
+            "Covalent bonding in carbon",
+            "Versatile nature of carbon",
+            "Saturated vs Unsaturated hydrocarbons"
+          ],
+          "Chapter 5: Life Processes": [
+            "Autotrophic vs Heterotrophic nutrition",
+            "Human circulatory system",
+            "Kidneys and excretion"
+          ],
+          "Chapter 6: Control and Coordination": [
+            "Nerve cell structure",
+            "Brain compartments",
+            "Plant hormones (Auxins, Gibberellins)"
+          ],
+          "Chapter 7: How do Organisms Reproduce?": [
+            "Asexual methods (fission, spore formation)",
+            "Human reproductive system",
+            "Contraceptive options"
+          ],
+          "Chapter 8: Heredity and Evolution": [
+            "Mendel's monohybrid/dihybrid cross",
+            "Sex determination",
+            "Homologous vs Analogous organs"
+          ],
+          "Chapter 9: Light - Reflection and Refraction": [
+            "Spherical mirror formula",
+            "Snell's law of refraction",
+            "Lens magnification power"
+          ],
+          "Chapter 10: The Human Eye and the Colorful World": [
+            "Structure of human eye",
+            "Defects (Myopia, Hypermetropia)",
+            "Prism light dispersion"
+          ],
+          "Chapter 11: Electricity": [
+            "Electric current & potential difference",
+            "Ohm's Law & resistivity",
+            "Resistors in series and parallel"
+          ],
+          "Chapter 12: Magnetic Effects of Electric Current": [
+            "Magnetic field lines",
+            "Force on current-carrying conductor",
+            "Electromagnetic induction (Faraday's Law)"
+          ]
+        }
+      },
+      "Mathematics": {
+        "chapters": {
+          "Chapter 1: Real Numbers": [
+            "Fundamental Theorem of Arithmetic",
+            "Proving irrationality",
+            "Decimal expansion of rational numbers"
+          ],
+          "Chapter 2: Polynomials": [
+            "Geometrical meaning of zeroes",
+            "Relation between zeroes and coefficients",
+            "Division algorithm"
+          ],
+          "Chapter 3: Pair of Linear Equations in Two Variables": [
+            "Graphical method of solution",
+            "Substitution and Elimination method",
+            "Cross-multiplication method"
+          ],
+          "Chapter 4: Quadratic Equations": [
+            "Solution by factorisation",
+            "Completing the square method",
+            "Quadratic formula discriminant"
+          ],
+          "Chapter 5: Arithmetic Progressions": [
+            "Defining AP sequences",
+            "Finding nth term of AP",
+            "Sum of first n terms of AP"
+          ],
+          "Chapter 6: Triangles": [
+            "Similarity of triangles",
+            "Basic Proportionality Theorem (Bales)",
+            "Pythagoras Theorem proof"
+          ],
+          "Chapter 7: Coordinate Geometry": [
+            "Distance formula derivation",
+            "Section formula ratios",
+            "Area of a triangle coordinates"
+          ],
+          "Chapter 8: Introduction to Trigonometry": [
+            "Trigonometric ratios of acute angles",
+            "Ratios of specific angles (30, 45, 60)",
+            "Trigonometric identities"
+          ],
+          "Chapter 9: Some Applications of Trigonometry": [
+            "Line of sight and angle of elevation",
+            "Angle of depression",
+            "Solving height and distance problems"
+          ],
+          "Chapter 10: Circles": [
+            "Tangent to a circle",
+            "Number of tangents from a point",
+            "Tangents are perpendicular to radius"
+          ]
+        }
+      },
+      "Social Science": {
+        "chapters": {
+          "Chapter 1: The Rise of Nationalism in Europe": [
+            "French Revolution ideals",
+            "Unification of Italy & Germany",
+            "Visual representations of nations"
+          ],
+          "Chapter 2: Nationalism in India": [
+            "Non-Cooperation Movement",
+            "Civil Disobedience and Dandi March",
+            "Sense of collective belonging"
+          ],
+          "Chapter 3: The Making of a Global World": [
+            "Silk routes connections",
+            "Conquest, disease and trade",
+            "Great Depression 1929"
+          ],
+          "Chapter 4: The Age of Industrialisation": [
+            "Before the Industrial Revolution",
+            "Hand labour vs Steam power",
+            "Industrialization in colonies"
+          ],
+          "Chapter 5: Print Culture and Modern World": [
+            "First printed books in East Asia",
+            "Print revolution impact in Europe",
+            "Print censorship in India"
+          ],
+          "Chapter 6: Resources and Development": [
+            "Classification of resources",
+            "Soil erosion conservation",
+            "Sustainable development protocols"
+          ],
+          "Chapter 7: Forest and Wildlife Resources": [
+            "Flora and fauna in India",
+            "Project Tiger reserves",
+            "Community conservation (Chipko)"
+          ],
+          "Chapter 8: Water Resources": [
+            "Water scarcity problems",
+            "Multi-purpose river dams",
+            "Rainwater harvesting methods"
+          ],
+          "Chapter 9: Agriculture": [
+            "Types of farming in India",
+            "Cropping patterns (Kharif, Rabi, Zaid)",
+            "Technological reforms in agriculture"
+          ],
+          "Chapter 10: Minerals and Energy Resources": [
+            "Types of minerals extraction",
+            "Coal, Petroleum, Solar, Wind energy",
+            "Conservation of energy resources"
+          ]
+        }
+      },
+      "English": {
+        "chapters": {
+          "Chapter 1: A Letter to God": [
+            "Lencho's crop damage",
+            "Faith in human kindness",
+            "Irony of the postmasters"
+          ],
+          "Chapter 2: Nelson Mandela: Long Walk to Freedom": [
+            "Apartheid regime history",
+            "Mandela's inauguration speech",
+            "Twin obligations"
+          ],
+          "Chapter 3: Two Stories about Flying": [
+            "His First Flight (young seagull)",
+            "The Black Aeroplane mystery",
+            "Overcoming fear"
+          ],
+          "Chapter 4: From the Diary of Anne Frank": [
+            "Anne Frank's background",
+            "Kitty diary entries",
+            "Relationship with teachers"
+          ],
+          "Chapter 5: The Hundred Dresses I": [
+            "Wanda Petronski tease",
+            "Drawing competition",
+            "School environment issues"
+          ],
+          "Chapter 6: The Hundred Dresses II": [
+            "Maddie and Peggy guilt",
+            "Wanda's letter of forgiveness",
+            "Social discrimination"
+          ],
+          "Chapter 7: Glimpses of India": [
+            "A Baker from Goa",
+            "Coorg coffee plantations",
+            "Tea from Assam"
+          ],
+          "Chapter 8: Mijbil the Otter": [
+            "Taming wild otters",
+            "Air travel with pets",
+            "London experiences"
+          ],
+          "Chapter 9: Madam Rides the Bus": [
+            "Valli's first bus ride",
+            "Curiosity about city life",
+            "Experiencing death"
+          ],
+          "Chapter 10: The Sermon at Benares": [
+            "Kisa Gotami story",
+            "Buddha's sermon on death",
+            "Acceptance of grief"
+          ]
+        }
+      },
+      "Hindi": {
+        "chapters": {
+          "Chapter 1: नेताजी का चश्मा": [
+            "देशभक्ति की भावना",
+            "कैप्टन चश्मेवाले का चरित्र",
+            "मूर्तिकला और समाज"
+          ],
+          "Chapter 2: बालगोबिन भगत": [
+            "कबीरपंथ और भगत जी",
+            "ग्रामीण जीवन",
+            "सामाजिक रूढ़ियों का विरोध"
+          ],
+          "Chapter 3: लखनवी अंदाज़": [
+            "नवाबी सामंती ठाठ",
+            "व्यंग्य",
+            "दिखावे की संस्कृति"
+          ],
+          "Chapter 4: मानवीय करुणा की दिव्य चमक": [
+            "फादर कामिल बुल्के",
+            "संस्मरण",
+            "भारतीय संस्कृति से लगाव"
+          ],
+          "Chapter 5: एक कहानी यह भी": [
+            "मन्नू भंडारी की आत्मकथा",
+            "स्वतंत्रता आंदोलन",
+            "पारिवारिक द्वंद्व"
+          ],
+          "Chapter 6: स्त्री शिक्षा के विरोधी कुतर्कों का खंडन": [
+            "स्त्री शिक्षा का महत्व",
+            "प्राचीन विदुषी स्त्रियां",
+            "तार्किक विरोध"
+          ],
+          "Chapter 7: नौबतखाने में इबादत": [
+            "बिस्मिल्ला खां का जीवन",
+            "शहनाई वादन",
+            "गंगा-जमुनी तहज़ीब"
+          ],
+          "Chapter 8: संस्कृति": [
+            "सभ्यता और संस्कृति में अंतर",
+            "मानव कल्याण",
+            "खोज और आविष्कार"
+          ],
+          "Chapter 9: रामलक्ष्मण परशुराम संवाद": [
+            "तुलसीदास के रामचरितमानस से",
+            "क्रोध और संयम",
+            "वीर रस"
+          ],
+          "Chapter 10: सवैया और कवित्त": [
+            "देव के पद",
+            "श्रृंगार रस",
+            "प्रकृति सौंदर्य"
+          ]
+        }
+      },
+      "Computer": {
+        "chapters": {
+          "Chapter 1: Programming Concepts in C++": [
+            "Variables and Data types",
+            "Control structures (loops, if-else)",
+            "Function declarations"
+          ],
+          "Chapter 2: Object Oriented Programming basics": [
+            "Classes and Objects",
+            "Encapsulation",
+            "Polymorphism and Inheritance"
+          ],
+          "Chapter 3: Web Designing using HTML/CSS": [
+            "HTML tags layout",
+            "CSS flexbox grids",
+            "Responsive Web Design properties"
+          ],
+          "Chapter 4: JavaScript Fundamentals": [
+            "Event listeners",
+            "Dynamic DOM manipulation",
+            "JSON API integration"
+          ],
+          "Chapter 5: Database Management Systems (DBMS)": [
+            "Relational databases",
+            "Primary keys and Foreign keys",
+            "Structured Query Language (SQL)"
+          ],
+          "Chapter 6: Networking and Security": [
+            "TCP/IP protocol suites",
+            "IP addresses routing",
+            "Encryption and Decryption keys"
+          ],
+          "Chapter 7: HTML Form Elements": [
+            "Input, Textarea, Select",
+            "Form action actions",
+            "Client side validation"
+          ],
+          "Chapter 8: CSS Animations": [
+            "Transitions rules",
+            "@keyframes rules",
+            "Transform rotation scaling"
+          ],
+          "Chapter 9: Introduction to Python Coding": [
+            "Syntax differences",
+            "Lists and Dictionaries",
+            "Importing packages"
+          ],
+          "Chapter 10: AI and Machine Learning Basics": [
+            "Supervised learning models",
+            "Neural network frameworks",
+            "Natural Language Processing algorithms"
+          ]
+        }
+      }
+    }
+  },
+  "11": {
+    "subjects": {
+      "Physics": {
+        "chapters": {
+          "Chapter 1: Physical world measurement scales": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 2: Motion, Speed and linear acceleration": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 3: Motion in a vector plane": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 4: Laws of motion and forces": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 5: Work, Energy and gravitational power": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 6: Particle system and angular momentum": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 7: Gravitational forces and orbits": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 8: Mechanical properties of solid states": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 9: Mechanical properties of fluids": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 10: Thermal properties of thermodynamics": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ]
+        }
+      },
+      "Chemistry": {
+        "chapters": {
+          "Chapter 1: Basic structural concepts": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 2: Atomic shells and quantum states": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 3: Periodic elements cataloging": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 4: Chemical bonds and molecules": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 5: States of gaseous matter": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 6: Thermodynamics and equilibrium": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 7: Redox electron transfers": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 8: Organic compounds nomenclature": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 9: Hydrocarbons chemistry": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 10: Environmental compounds": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ]
+        }
+      },
+      "Biology": {
+        "chapters": {
+          "Chapter 1: The living classification tree": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 2: Plant kingdom and botanics": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 3: Animal classification categories": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 4: Cell wall structure and functions": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 5: Biomolecules and enzymes": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 6: Cell cycles division rules": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 7: Photosynthetic reactions stroma": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 8: Human respiratory circulation": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 9: Human neural coordination": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 10: Biodiversity conservation": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ]
+        }
+      },
+      "Mathematics": {
+        "chapters": {
+          "Chapter 1: General Numbers and Patterns": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 2: Basic Operations and Functions": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 3: Algebraic Structures and Formulas": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 4: Geometry and Coordinate Systems": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 5: Measurement of Length and Area": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 6: Data Interpretation and Graphs": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 7: Fractions, Decimals, and Ratios": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 8: Ratios and Percentage Applications": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 9: Equations Solving Mechanics": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 10: Advanced Mathematical Theorems": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ]
+        }
+      },
+      "English": {
+        "chapters": {
+          "Chapter 1: Morning Song and Greetings": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 2: Stories of Brave Friends": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 3: Nature and Green Fields": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 4: Travel Diaries around the Globe": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 5: Humorous Tales and Jokes": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 6: Inspirational Achievements": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 7: Legends and Ancient Fables": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 8: Personal Health and Daily Habits": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 9: Animal Kingdoms and Wildlife": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 10: Bright Tomorrows and Leadership": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ]
+        }
+      },
+      "Hindi": {
+        "chapters": {
+          "Chapter 1: सवेरा और नई उमंग": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 2: सच्चे मित्र की कहानी": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 3: हमारे पेड़-पौधे और हरियाली": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 4: भारत के गौरवशाली त्योहार": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 5: वीर सेनानी और साहस": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 6: पंचतंत्र की हितकारी नीति": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 7: खेल-कूद और उत्तम स्वास्थ्य": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 8: गाँव की सुंदर संस्कृति": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 9: एकता में ही अटूट शक्ति": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 10: परिश्रम का मीठा फल": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ]
+        }
+      },
+      "Computer": {
+        "chapters": {
+          "Chapter 1: Smart Computational Machines": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 2: Internal Structure and Architecture": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 3: Command Lines and Operating Systems": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 4: Document Formatting Wizards": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 5: Presentation slide designers": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 6: Data Analysis and Spreadsheet basics": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 7: Safe Internet browsing rules": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 8: Logical flowcharts and pseudo-models": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 9: Software algorithms and coding syntax": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 10: Information security and firewall rules": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ]
+        }
+      },
+      "Social Science": {
+        "chapters": {
+          "Chapter 1: What, Where, How and Historical timelines": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 2: Earliest cities and architecture": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 3: Ancient books and cultural details": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 4: Empires, Kings and early Republics": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 5: Emperors, Wars and spiritual changes": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 6: Rural administrative operations": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 7: Diversity and constitutional rights": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 8: Local Government and Panchayati Raj": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 9: Natural resources and human life": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 10: Trade channels and world networks": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ]
+        }
+      }
+    }
+  },
+  "12": {
+    "subjects": {
+      "Physics": {
+        "chapters": {
+          "Chapter 1: Physical world measurement scales": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 2: Motion, Speed and linear acceleration": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 3: Motion in a vector plane": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 4: Laws of motion and forces": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 5: Work, Energy and gravitational power": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 6: Particle system and angular momentum": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 7: Gravitational forces and orbits": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 8: Mechanical properties of solid states": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 9: Mechanical properties of fluids": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 10: Thermal properties of thermodynamics": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ]
+        }
+      },
+      "Chemistry": {
+        "chapters": {
+          "Chapter 1: Basic structural concepts": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 2: Atomic shells and quantum states": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 3: Periodic elements cataloging": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 4: Chemical bonds and molecules": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 5: States of gaseous matter": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 6: Thermodynamics and equilibrium": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 7: Redox electron transfers": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 8: Organic compounds nomenclature": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 9: Hydrocarbons chemistry": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 10: Environmental compounds": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ]
+        }
+      },
+      "Biology": {
+        "chapters": {
+          "Chapter 1: The living classification tree": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 2: Plant kingdom and botanics": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 3: Animal classification categories": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 4: Cell wall structure and functions": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 5: Biomolecules and enzymes": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 6: Cell cycles division rules": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 7: Photosynthetic reactions stroma": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 8: Human respiratory circulation": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 9: Human neural coordination": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 10: Biodiversity conservation": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ]
+        }
+      },
+      "Mathematics": {
+        "chapters": {
+          "Chapter 1: General Numbers and Patterns": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 2: Basic Operations and Functions": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 3: Algebraic Structures and Formulas": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 4: Geometry and Coordinate Systems": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 5: Measurement of Length and Area": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 6: Data Interpretation and Graphs": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 7: Fractions, Decimals, and Ratios": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 8: Ratios and Percentage Applications": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 9: Equations Solving Mechanics": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 10: Advanced Mathematical Theorems": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ]
+        }
+      },
+      "English": {
+        "chapters": {
+          "Chapter 1: Morning Song and Greetings": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 2: Stories of Brave Friends": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 3: Nature and Green Fields": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 4: Travel Diaries around the Globe": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 5: Humorous Tales and Jokes": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 6: Inspirational Achievements": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 7: Legends and Ancient Fables": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 8: Personal Health and Daily Habits": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 9: Animal Kingdoms and Wildlife": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 10: Bright Tomorrows and Leadership": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ]
+        }
+      },
+      "Hindi": {
+        "chapters": {
+          "Chapter 1: सवेरा और नई उमंग": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 2: सच्चे मित्र की कहानी": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 3: हमारे पेड़-पौधे और हरियाली": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 4: भारत के गौरवशाली त्योहार": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 5: वीर सेनानी और साहस": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 6: पंचतंत्र की हितकारी नीति": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 7: खेल-कूद और उत्तम स्वास्थ्य": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 8: गाँव की सुंदर संस्कृति": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 9: एकता में ही अटूट शक्ति": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 10: परिश्रम का मीठा फल": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ]
+        }
+      },
+      "Computer": {
+        "chapters": {
+          "Chapter 1: Smart Computational Machines": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 2: Internal Structure and Architecture": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 3: Command Lines and Operating Systems": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 4: Document Formatting Wizards": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 5: Presentation slide designers": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 6: Data Analysis and Spreadsheet basics": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 7: Safe Internet browsing rules": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 8: Logical flowcharts and pseudo-models": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 9: Software algorithms and coding syntax": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 10: Information security and firewall rules": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ]
+        }
+      },
+      "Social Science": {
+        "chapters": {
+          "Chapter 1: What, Where, How and Historical timelines": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 2: Earliest cities and architecture": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 3: Ancient books and cultural details": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 4: Empires, Kings and early Republics": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 5: Emperors, Wars and spiritual changes": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 6: Rural administrative operations": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 7: Diversity and constitutional rights": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 8: Local Government and Panchayati Raj": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 9: Natural resources and human life": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ],
+          "Chapter 10: Trade channels and world networks": [
+            "Core Theory",
+            "Practical application",
+            "Worksheet Review"
+          ]
+        }
+      }
+    }
+  }
+};
