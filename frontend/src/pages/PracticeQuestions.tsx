@@ -40,7 +40,7 @@ interface Question {
 type BoardState = 'idle' | 'loading' | 'quiz';
 
 export const PracticeQuestions: React.FC<PracticeQuestionsProps> = ({ onNavigate }) => {
-  const { language, setLanguage, classLevel, setClassLevel, updateXP, engagement, updateEngagement } = useMainStore();
+  const { language, setLanguage, classLevel, setClassLevel, updateXP, engagement, updateEngagement, setUser } = useMainStore();
 
   // Curriculum
   const [gradeLevel, setGradeLevel] = useState(classLevel);
@@ -489,6 +489,49 @@ export const PracticeQuestions: React.FC<PracticeQuestionsProps> = ({ onNavigate
     window.addEventListener('keydown', h);
     return () => window.removeEventListener('keydown', h);
   }, [boardState, currentQ, questions, isAnimating, answered]);
+
+  // ── Log Quiz Activity to Backend ────────────────────────────────
+  useEffect(() => {
+    if (boardState === 'quiz' && questions.length > 0 && answered.size === questions.length) {
+      const logQuizSession = async () => {
+        try {
+          let correctCount = 0;
+          questions.forEach((qItem, i) => {
+            const userSelection = selectedOptionsMap[i];
+            const isCorrect = qItem.type === 'fill'
+              ? userSelection?.trim().toLowerCase() === qItem.correctOption.trim().toLowerCase()
+              : userSelection?.[0] === qItem.correctOption;
+            if (isCorrect) correctCount++;
+          });
+          const scorePercent = Math.round((correctCount / questions.length) * 100);
+          
+          const response = await fetch('http://localhost:5000/api/learning/activity/log', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: 'student_1',
+              activityType: 'quiz',
+              subject: subject || 'Science',
+              chapter: chapter || '',
+              topic: topicInput,
+              timeSpent: Math.round(questions.length * 1.5),
+              score: scorePercent,
+              totalQuestions: questions.length,
+              correctAnswers: correctCount,
+              wrongAnswers: questions.length - correctCount
+            })
+          });
+          const resData = await response.json();
+          if (resData.success && resData.user) {
+            setUser(resData.user);
+          }
+        } catch (err) {
+          console.error('Failed to log practice quiz activity:', err);
+        }
+      };
+      logQuizSession();
+    }
+  }, [answered, boardState, questions, selectedOptionsMap, subject, chapter, topicInput, setUser]);
 
   const handleReset = () => {
     setQuestions([]);

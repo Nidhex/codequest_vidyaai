@@ -70,7 +70,7 @@ export const QuizArena: React.FC<QuizArenaProps> = ({
   initialDifficulty, 
   onNavigate 
 }) => {
-  const { language, classLevel, updateXP } = useMainStore();
+  const { language, classLevel, updateXP, setUser } = useMainStore();
   const t = TRANSLATIONS[language] || TRANSLATIONS.en;
 
   // ── PRE-QUIZ SETUP STATE ──────────────────────────────────────────
@@ -221,6 +221,36 @@ export const QuizArena: React.FC<QuizArenaProps> = ({
       if (passPercent >= 70) {
         confetti({ particleCount: 200, spread: 90, origin: { y: 0.5 }, colors: ['#00f5d4', '#fee440', '#f15bb5'] });
       }
+      
+      // Log quiz complete to Engagement AI backend
+      const logQuizCompletion = async () => {
+        try {
+          const passPercentVal = Math.round((score / questions.length) * 100);
+          const response = await fetch('http://localhost:5000/api/learning/activity/log', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: 'student_1',
+              activityType: 'quiz',
+              subject: subject || 'Science',
+              chapter: chapter || '',
+              topic: topic,
+              timeSpent: Math.round(questions.length * 1.5),
+              score: passPercentVal,
+              totalQuestions: questions.length,
+              correctAnswers: score,
+              wrongAnswers: questions.length - score
+            })
+          });
+          const resData = await response.json();
+          if (resData.success && resData.user) {
+            setUser(resData.user);
+          }
+        } catch (err) {
+          console.error("Failed to log quiz complete:", err);
+        }
+      };
+      logQuizCompletion();
     }
   };
 

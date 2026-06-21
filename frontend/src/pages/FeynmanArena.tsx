@@ -14,7 +14,7 @@ interface FeynmanArenaProps {
 }
 
 export const FeynmanArena: React.FC<FeynmanArenaProps> = ({ onNavigate }) => {
-  const { feynman, language, setLanguage, classLevel, setClassLevel, addFeynmanMessage, setFeynmanScores, resetFeynman, updateXP } = useMainStore();
+  const { feynman, language, setLanguage, classLevel, setClassLevel, addFeynmanMessage, setFeynmanScores, resetFeynman, updateXP, setUser } = useMainStore();
   const t = TRANSLATIONS[language] || TRANSLATIONS.en;
 
   // Dynamic curriculum states
@@ -245,6 +245,32 @@ export const FeynmanArena: React.FC<FeynmanArenaProps> = ({ onNavigate }) => {
         setFeynmanScores(data.score, data.gaps);
         updateXP(15);
         speakText(data.followUpQuestion);
+
+        // Log Feynman Socratic progress to Engagement AI
+        const logFeynmanSession = async () => {
+          try {
+            const logResponse = await fetch('http://localhost:5000/api/learning/activity/log', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                userId: 'student_1',
+                activityType: 'feynman',
+                subject: subject || 'Science',
+                chapter: chapter || '',
+                topic: topicInput,
+                timeSpent: 5,
+                score: data.score
+              })
+            });
+            const resData = await logResponse.json();
+            if (resData.success && resData.user) {
+              setUser(resData.user);
+            }
+          } catch (err) {
+            console.error("Failed to log feynman turn:", err);
+          }
+        };
+        logFeynmanSession();
       }
     } catch (e) {
       console.error("Feynman response fail:", e);

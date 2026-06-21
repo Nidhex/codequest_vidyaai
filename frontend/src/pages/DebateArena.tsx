@@ -310,7 +310,7 @@ const RadarChart: React.FC<{ scores: Record<string, number> }> = ({ scores }) =>
 // 🎤 CORE DEBATE CONTROLLER
 // ----------------------------------------------------
 const DebateArenaContent: React.FC<DebateArenaProps> = ({ onNavigate }) => {
-  const { debate, language, user, addDebateArgument, setDebateScores, resetDebate, updateXP, setLanguage, setDebateTopic, setClassLevel, updateEngagement } = useMainStore();
+  const { debate, language, user, addDebateArgument, setDebateScores, resetDebate, updateXP, setLanguage, setDebateTopic, setClassLevel, updateEngagement, setUser } = useMainStore();
 
   // Configuration settings
   const [selectedCategory, setSelectedCategory] = useState<'science' | 'society' | 'environment'>('science');
@@ -1436,7 +1436,42 @@ const DebateArenaContent: React.FC<DebateArenaProps> = ({ onNavigate }) => {
             {roundCount > 2 && (
               <button
                 type="button"
-                onClick={() => { window.speechSynthesis.cancel(); setShowEndReport(true); }}
+                onClick={() => {
+                  window.speechSynthesis.cancel();
+                  setShowEndReport(true);
+
+                  // Log debate completion to Engagement AI backend
+                  const logDebateSession = async () => {
+                    try {
+                      const scores = debate?.scores || {};
+                      const scoreValues = Object.values(scores).map(Number);
+                      const avgScore = scoreValues.length > 0
+                        ? Math.round(scoreValues.reduce((a, b) => a + b, 0) / scoreValues.length)
+                        : 80;
+
+                      const response = await fetch('http://localhost:5000/api/learning/activity/log', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          userId: 'student_1',
+                          activityType: 'debate',
+                          subject: 'English',
+                          chapter: 'Debates',
+                          topic: debate.activeTopic,
+                          timeSpent: 15,
+                          score: avgScore
+                        })
+                      });
+                      const resData = await response.json();
+                      if (resData.success && resData.user) {
+                        setUser(resData.user);
+                      }
+                    } catch (err) {
+                      console.error("Failed to log debate session:", err);
+                    }
+                  };
+                  logDebateSession();
+                }}
                 className="w-full py-3 rounded-xl bg-gradient-to-r from-cyber-purple to-cyber-pink hover:opacity-90 font-mono text-xs font-bold uppercase tracking-widest transition-all shadow-glow-purple cursor-pointer text-center text-white"
               >
                 🏆 End Debate & View Analytics

@@ -4657,6 +4657,243 @@ Return ONLY a valid JSON array of objects (no markdown, no extra text, no code f
 });
 
 // ----------------------------------------------------
+// 📊 ENGAGEMENT AI REDESIGN: ACTIVITY LOGS & ANALYTICS
+// ----------------------------------------------------
+
+// 1. Log Study Activity
+app.post('/api/learning/activity/log', (req, res) => {
+  const { userId, activityType, subject, chapter, topic, timeSpent, score, totalQuestions, correctAnswers, wrongAnswers } = req.body;
+  
+  if (!userId || !activityType) {
+    return res.status(400).json({ success: false, error: "Missing required fields userId or activityType" });
+  }
+
+  try {
+    const result = db.addStudyLog({
+      userId,
+      activityType,
+      subject: subject || "Science",
+      chapter: chapter || "",
+      topic: topic || "",
+      timeSpent: parseInt(timeSpent) || 10,
+      score: score !== undefined ? parseFloat(score) : undefined,
+      totalQuestions: totalQuestions !== undefined ? parseInt(totalQuestions) : undefined,
+      correctAnswers: correctAnswers !== undefined ? parseInt(correctAnswers) : undefined,
+      wrongAnswers: wrongAnswers !== undefined ? parseInt(wrongAnswers) : undefined
+    });
+
+    res.json({ success: true, log: result.log, user: result.user });
+  } catch (err) {
+    console.error("Failed to add study log:", err);
+    res.status(500).json({ success: false, error: "Failed to save activity log" });
+  }
+});
+
+// 2. Fetch Compiled Learning Analytics
+app.get('/api/learning/activity/stats', (req, res) => {
+  const userId = req.query.userId || "student_1";
+  
+  try {
+    const logs = db.getStudyLogs(userId);
+    const user = db.getUser(userId);
+
+    if (!user) {
+      return res.status(404).json({ success: false, error: "User not found" });
+    }
+
+    // A. Study Overview
+    const totalStudyTime = logs.reduce((acc, l) => acc + (l.timeSpent || 0), 0);
+    const lessonsCompletedCount = logs.filter(l => l.activityType === 'lesson').length;
+    const weeklyStreak = user.streak || 1;
+    const totalXP = user.xp;
+    const level = user.level;
+
+    // B. Subject Progress (from user profile, recalculated dynamically by db.js)
+    const subjectProgress = user.subjectProgress || {};
+
+    // C. Weak Topics Detection
+    const weakTopicsMap = {};
+    logs.forEach(l => {
+      if (l.score !== undefined && l.topic) {
+        if (l.score < 70) {
+          weakTopicsMap[l.topic] = {
+            subject: l.subject || "Science",
+            chapter: l.chapter || "",
+            topic: l.topic,
+            score: Math.round(l.score),
+            timestamp: l.timestamp
+          };
+        } else if (l.score >= 80) {
+          delete weakTopicsMap[l.topic]; // Mastery achieved, remove
+        }
+      }
+    });
+    const weakTopics = Object.values(weakTopicsMap);
+
+    // D. Quiz Analytics
+    const quizLogs = logs.filter(l => l.activityType === 'quiz');
+    let avgQuizScore = 0;
+    let quizAccuracy = 0;
+    let hardestSubject = "None";
+    let easiestSubject = "None";
+
+    if (quizLogs.length > 0) {
+      const totalScore = quizLogs.reduce((acc, q) => acc + (q.score || 0), 0);
+      avgQuizScore = Math.round(totalScore / quizLogs.length);
+
+      const totalQ = quizLogs.reduce((acc, q) => acc + (q.totalQuestions || 0), 0);
+      const totalC = quizLogs.reduce((acc, q) => acc + (q.correctAnswers || 0), 0);
+      quizAccuracy = totalQ > 0 ? Math.round((totalC / totalQ) * 100) : avgQuizScore;
+
+      // Group by subject to find easiest/hardest
+      const subjScores = {};
+      quizLogs.forEach(q => {
+        const s = q.subject || "Science";
+        if (!subjScores[s]) subjScores[s] = [];
+        subjScores[s].push(q.score || 0);
+      });
+
+      let minAvg = Infinity;
+      let maxAvg = -Infinity;
+      Object.keys(subjScores).forEach(s => {
+        const avg = subjScores[s].reduce((a, b) => a + b, 0) / subjScores[s].length;
+        if (avg < minAvg) {
+          minAvg = avg;
+          hardestSubject = s;
+        }
+        if (avg > maxAvg) {
+          maxAvg = avg;
+          easiestSubject = s;
+        }
+      });
+    }
+
+    const recentQuizHistory = quizLogs
+      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+      .slice(0, 5)
+      .map(q => ({
+        id: q.id,
+        topic: q.topic || q.chapter || "General Practice",
+        subject: q.subject,
+        score: Math.round(q.score || 0),
+        date: new Date(q.timestamp).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })
+      }));
+
+    // E. Learning Heatmap (last 28 days)
+    const heatmap = [];
+    const now = new Date();
+    const dayMs = 24 * 60 * 60 * 1000;
+    
+    // Group logs by date string
+    const logsByDate = {};
+    logs.forEach(l => {
+      const dateStr = new Date(l.timestamp).toISOString().split('T')[0];
+      logsByDate[dateStr] = (logsByDate[dateStr] || 0) + 1;
+    });
+
+    for (let i = 27; i >= 0; i--) {
+      const d = new Date(now.getTime() - i * dayMs);
+      const dateStr = d.toISOString().split('T')[0];
+      heatmap.push({
+        date: dateStr,
+        count: logsByDate[dateStr] || 0
+      });
+    }
+
+    // F. Focus Tracking
+    const activeSessions = logs.filter(l => l.timeSpent > 0);
+    const avgSessionDuration = activeSessions.length > 0 
+      ? Math.round(activeSessions.reduce((acc, l) => acc + l.timeSpent, 0) / activeSessions.length)
+      : 15;
+
+    // Peak focus hour calculation
+    const hourCounts = {};
+    logs.forEach(l => {
+      const hour = new Date(l.timestamp).getHours();
+      hourCounts[hour] = (hourCounts[hour] || 0) + 1;
+    });
+    let peakHourVal = 10; // Default 10 AM
+    let maxHourCount = 0;
+    Object.keys(hourCounts).forEach(h => {
+      if (hourCounts[h] > maxHourCount) {
+        maxHourCount = hourCounts[h];
+        peakHourVal = parseInt(h);
+      }
+    });
+    const suffix = peakHourVal >= 12 ? "PM" : "AM";
+    const displayHour = peakHourVal % 12 === 0 ? 12 : peakHourVal % 12;
+    const peakFocusHour = `${displayHour}:00 ${suffix}`;
+
+    // G. AI Recommendations Engine
+    const recommendations = [];
+    if (weakTopics.length > 0) {
+      weakTopics.forEach(wt => {
+        recommendations.push({
+          type: "revision",
+          title: `Needs Practice: ${wt.topic}`,
+          description: `Your last quiz score was ${wt.score}%. We recommend reviewing the "${wt.chapter || wt.topic}" chapter inside the Learn module.`,
+          actionLabel: "Revise Chapter",
+          subject: wt.subject,
+          topic: wt.topic
+        });
+      });
+    }
+
+    // Always add standard high-value suggestions
+    recommendations.push({
+      type: "quiz",
+      title: "Daily Practice Challenge",
+      description: "Solve a quick 5-question adaptive quiz on your current subject to maintain your study streak.",
+      actionLabel: "Take Quiz",
+      subject: "Science",
+      topic: "Crop Production"
+    });
+
+    recommendations.push({
+      type: "feynman",
+      title: "Explain to Vidya AI",
+      description: "Use Feynman Mode to explain the structure of the Atom in your own words. Teaching others is the best way to master a topic!",
+      actionLabel: "Start Feynman Mode",
+      subject: "Science",
+      topic: "Structure of the Atom"
+    });
+
+    res.json({
+      success: true,
+      stats: {
+        userId,
+        userName: user.name,
+        totalStudyTime,
+        lessonsCompletedCount,
+        weeklyStreak,
+        totalXP,
+        level,
+        subjectProgress,
+        weakTopics,
+        quizAnalytics: {
+          avgQuizScore,
+          quizAccuracy,
+          hardestSubject,
+          easiestSubject,
+          recentQuizHistory
+        },
+        heatmap,
+        focusTracking: {
+          avgSessionDuration,
+          peakFocusHour,
+          attentionHistory: user.attentionScores || [85, 88, 78, 88, 84, 86, 91]
+        },
+        recommendations
+      }
+    });
+
+  } catch (err) {
+    console.error("Failed to compile analytics:", err);
+    res.status(500).json({ success: false, error: "Failed to compile learning analytics" });
+  }
+});
+
+// ----------------------------------------------------
 // 🔌 SOCKET.IO REAL-TIME INTERACTION
 // ----------------------------------------------------
 io.on('connection', (socket) => {
