@@ -2389,161 +2389,7 @@ Return ONLY valid JSON (no markdown, no ticks):
 });
 
 
-// ── PRACTICE QUESTIONS ENDPOINT ──────────────────────────────────────────────
-// Generates 8 MCQ practice questions on a topic in the selected language
-app.post('/api/learning/practice/questions', async (req, res) => {
-  const { topic, classLevel, language, subject, chapter } = req.body;
-  const lang = language || 'en';
-  const langName = LANG_NAMES[lang] || 'English';
-  const cl = classLevel || 8;
-  const actualTopic = topic || 'Photosynthesis';
-  const actualSubject = subject || 'Science';
-  const actualChapter = chapter || '';
-
-  // ── English fallback question bank ────────────────────────────────────────
-  const buildFallbackQuestions = (topicName, grade, sub) => {
-    const topicLower = topicName.toLowerCase();
-
-    // Photosynthesis specific
-    if (topicLower.includes('photosynthesis') || topicLower.includes('photo')) {
-      return [
-        { questionNumber:1, type:'mcq', question:'What is photosynthesis?', options:['A) Breakdown of glucose for energy', 'B) Process by which plants make food using sunlight', 'C) Absorption of minerals from soil', 'D) Exchange of gases only'], correctOption:'B', explanation:'Photosynthesis is the process by which green plants use sunlight, water and CO₂ to prepare food (glucose). It is described in NCERT Class 8 Chapter: How Do Organisms Reproduce.' },
-        { questionNumber:2, type:'mcq', question:'What is the chemical equation for photosynthesis?', options:['A) C₆H₁₂O₆ + O₂ → CO₂ + H₂O', 'B) 6CO₂ + 6H₂O + Light → C₆H₁₂O₆ + 6O₂', 'C) CO₂ + H₂O → CH₄ + O₂', 'D) 6O₂ + 6H₂O → C₆H₁₂O₆ + CO₂'], correctOption:'B', explanation:'The correct equation is: 6CO₂ + 6H₂O + Light Energy → C₆H₁₂O₆ + 6O₂. Plants absorb CO₂ and water and produce glucose and oxygen.' },
-        { questionNumber:3, type:'mcq', question:'Where does photosynthesis primarily occur?', options:['A) In the roots of the plant', 'B) In the stem of the plant', 'C) In the chloroplasts inside leaf cells', 'D) In the flower petals'], correctOption:'C', explanation:'Photosynthesis occurs in the chloroplasts, which contain the green pigment chlorophyll. Leaves are the main site because they are flat and have maximum surface area.' },
-        { questionNumber:4, type:'mcq', question:'Which pigment in leaves captures sunlight for photosynthesis?', options:['A) Melanin', 'B) Carotene', 'C) Haemoglobin', 'D) Chlorophyll'], correctOption:'D', explanation:'Chlorophyll is the green pigment found in chloroplasts that captures light energy from the sun and uses it to power the photosynthesis reaction.' },
-        { questionNumber:5, type:'mcq', question:'What are the three raw materials needed for photosynthesis?', options:['A) Glucose, oxygen, water', 'B) Carbon dioxide, water, and light energy', 'C) Nitrogen, oxygen, and sunlight', 'D) Minerals, water, and carbon monoxide'], correctOption:'B', explanation:'The three essential raw materials are: (1) Carbon Dioxide — from air via stomata, (2) Water — from soil via roots, and (3) Light Energy — from the sun captured by chlorophyll.' },
-        { questionNumber:6, type:'mcq', question:'Which of the following is a product of photosynthesis?', options:['A) Carbon dioxide and water', 'B) Nitrogen gas and glucose', 'C) Glucose and oxygen', 'D) Starch and carbon dioxide'], correctOption:'C', explanation:'Photosynthesis produces Glucose (C₆H₁₂O₆) — stored as food for the plant — and Oxygen (O₂) — released into the air as a by-product through stomata.' },
-        { questionNumber:7, type:'mcq', question:'Which factor does NOT affect the rate of photosynthesis?', options:['A) Light intensity', 'B) CO₂ concentration', 'C) The gardener\'s age', 'D) Temperature'], correctOption:'C', explanation:'The gardener\'s age has no effect. The actual limiting factors are light intensity, CO₂ concentration, temperature, and water availability — all described in NCERT.' },
-        { questionNumber:8, type:'mcq', question:'What is the significance of photosynthesis for the atmosphere?', options:['A) It increases CO₂ levels', 'B) It removes oxygen from air', 'C) It replenishes oxygen and reduces CO₂ in the atmosphere', 'D) It has no effect on atmospheric composition'], correctOption:'C', explanation:'Photosynthesis is crucial because it removes CO₂ (a greenhouse gas) from the atmosphere and releases O₂, maintaining the atmospheric balance that supports all aerobic life.' }
-      ];
-    }
-
-    // Agricultural implements specific
-    if (topicLower.includes('agricultural') || topicLower.includes('implement') || topicLower.includes('farm')) {
-      return [
-        { questionNumber:1, type:'mcq', question:'What are agricultural implements?', options:['A) Only traditional wooden tools used by farmers', 'B) Tools, equipment and machines used to perform farming operations', 'C) Chemicals used to improve crop yield', 'D) Seeds used for sowing'], correctOption:'B', explanation:'Agricultural implements are tools, equipment and machines used by farmers to perform various farming operations such as ploughing, sowing, irrigating and harvesting.' },
-        { questionNumber:2, type:'mcq', question:'Which implement is used for ploughing the soil?', options:['A) Sickle', 'B) Seed Drill', 'C) Plough (Hala)', 'D) Thresher'], correctOption:'C', explanation:'The Plough (Hala) is used for ploughing — loosening and turning over the topsoil to prepare it for sowing. It is one of the most ancient agricultural tools used in India.' },
-        { questionNumber:3, type:'mcq', question:'What is the function of a Seed Drill?', options:['A) To water the crops', 'B) To harvest mature crops', 'C) To sow seeds at uniform depth and spacing', 'D) To remove weeds from the field'], correctOption:'C', explanation:'A Seed Drill sows seeds at uniform depth and spacing automatically, improving germination rates and saving seed compared to broadcasting by hand.' },
-        { questionNumber:4, type:'mcq', question:'Which machine performs reaping, threshing and winnowing in one pass?', options:['A) Tractor', 'B) Power Tiller', 'C) Combine Harvester', 'D) Seed Drill'], correctOption:'C', explanation:'The Combine Harvester performs three operations in one machine pass: reaping (cutting), threshing (separating grain from stalk), and winnowing (removing husk). It saves enormous time and labour.' },
-        { questionNumber:5, type:'mcq', question:'What is the purpose of a Thresher?', options:['A) To plough the soil', 'B) To separate grain from the stalk and husk', 'C) To water crops using sprinklers', 'D) To transport crops to market'], correctOption:'B', explanation:'A Thresher is used after harvesting to separate the grain from the stalk, leaves and husk. It can be manually operated or powered by a tractor.' },
-        { questionNumber:6, type:'mcq', question:'Which irrigation implement saves the most water by delivering it directly to plant roots?', options:['A) Flood irrigation channels', 'B) Persian Wheel (Rahat)', 'C) Drip Irrigation System', 'D) Sprinkler watering can'], correctOption:'C', explanation:'Drip Irrigation delivers water directly to plant roots through pipes and drippers, saving up to 60% water compared to flood irrigation. It is the most water-efficient method.' },
-        { questionNumber:7, type:'mcq', question:'Which hand tool is most commonly used for cutting grain crops like wheat and rice?', options:['A) Hoe', 'B) Cultivator', 'C) Sickle', 'D) Plough'], correctOption:'C', explanation:'The Sickle is a C-shaped blade on a wooden handle, widely used in India for cutting (reaping) standing grain crops like wheat, rice and paddy during harvest.' },
-        { questionNumber:8, type:'mcq', question:'The Persian Wheel (Rahat) is used for which agricultural purpose?', options:['A) Ploughing fields', 'B) Harvesting crops', 'C) Lifting water from wells for irrigation', 'D) Removing weeds from fields'], correctOption:'C', explanation:'The Persian Wheel (Rahat) is an animal-powered water-lifting device historically used in northern India to lift water from wells or ponds for irrigating fields.' }
-      ];
-    }
-
-    // Generic questions for any topic
-    return Array.from({ length: 8 }, (_, i) => ({
-      questionNumber: i + 1, type: 'mcq',
-      question: `According to NCERT Class ${grade} ${sub}, which of the following correctly describes an important aspect of ${topicName}? (Question ${i + 1})`,
-      options: [
-        `A) ${topicName} is a process that converts energy into matter`,
-        `B) ${topicName} is the core concept described in NCERT Class ${grade} ${sub}`,
-        `C) ${topicName} is unrelated to the chapter's main theme`,
-        `D) ${topicName} was discovered in the 20th century only`
-      ],
-      correctOption: 'B',
-      explanation: `Option B is correct. According to the NCERT textbook for Class ${grade} ${sub}, ${topicName} is the core concept of this chapter that students must master for board examinations and conceptual understanding.`
-    }));
-  };
-
-  // ── Translation helper ────────────────────────────────────────────────────
-  const MY_MEMORY_MAP = { hi:'hi', mr:'mr', bn:'bn', ta:'ta', te:'te', kn:'kn', ml:'ml', gu:'gu', pa:'pa', ur:'ur', or:'or', as:'as', sa:'sa', ne:'ne', sd:'sd', kok:'kok', mai:'hi', doi:'hi', brx:'bn', ks:'ur', mni:'bn' };
-
-  const translateText = async (text, targetCode) => {
-    try {
-      const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|${targetCode}&de=vidyaai@education.in`;
-      const r = await fetch(url, { signal: AbortSignal.timeout(4000) });
-      const d = await r.json();
-      if (d.responseStatus === 200 && d.responseData?.translatedText) {
-        return d.responseData.translatedText;
-      }
-      return text;
-    } catch {
-      return text;
-    }
-  };
-
-  // ── Try AI first ──────────────────────────────────────────────────────────
-  const aiPrompt = `You are VIDYA AI, an NCERT curriculum expert for Indian schools. Generate exactly 8 multiple-choice practice questions (MCQ) on the following topic:
-
-Topic: "${actualTopic}"
-Subject: "${actualSubject}"  
-Chapter: "${actualChapter}"
-Class Level: Class ${cl}
-Language: ${langName}
-
-STRICT RULES:
-1. ALL content MUST be in ${langName}.
-2. Questions must be based on NCERT Class ${cl} ${actualSubject} curriculum only.
-3. Each question must have exactly 4 options (A, B, C, D).
-4. Include a clear explanation for the correct answer.
-5. Difficulty: Mix of easy (2), medium (4), hard (2) questions.
-
-Return ONLY valid JSON (no markdown, no ticks):
-{
-  "questions": [
-    {
-      "questionNumber": 1,
-      "type": "mcq",
-      "question": "Question text in ${langName}",
-      "options": ["A) option in ${langName}", "B) option in ${langName}", "C) option in ${langName}", "D) option in ${langName}"],
-      "correctOption": "A",
-      "explanation": "Explanation in ${langName}"
-    }
-  ]
-}`;
-
-  const aiResp = await queryLLMChain(`PracticeQ:${actualTopic}:${langName}`, aiPrompt, 6000);
-  if (aiResp) {
-    try {
-      let clean = aiResp.text.trim();
-      if (clean.startsWith('```json')) clean = clean.slice(7);
-      if (clean.startsWith('```')) clean = clean.slice(3);
-      if (clean.endsWith('```')) clean = clean.slice(0, -3);
-      const parsed = JSON.parse(clean.trim());
-      if (parsed.questions && Array.isArray(parsed.questions) && parsed.questions.length >= 4) {
-        return res.json({ success: true, provider: aiResp.provider, topic: actualTopic, questions: parsed.questions });
-      }
-    } catch (e) { console.error('Failed to parse practice questions from AI:', e.message); }
-  }
-
-  // ── Fallback: English questions + translate if needed ─────────────────────
-  const fallbackQs = buildFallbackQuestions(actualTopic, cl, actualSubject);
-
-  if (lang !== 'en' && MY_MEMORY_MAP[lang]) {
-    const targetCode = MY_MEMORY_MAP[lang];
-    try {
-      console.log(`Translating ${fallbackQs.length} questions to ${langName} sequentially...`);
-      const translatedQs = [];
-      for (const q of fallbackQs) {
-        try {
-          const combined = `${q.question} | ${q.options[0]} | ${q.options[1]} | ${q.options[2]} | ${q.options[3]} | ${q.explanation}`;
-          const translated = await translateText(combined, targetCode);
-          const parts = translated.split('|');
-          const tQ = parts[0]?.trim() || q.question;
-          const tA = parts[1]?.trim() || q.options[0];
-          const tB = parts[2]?.trim() || q.options[1];
-          const tC = parts[3]?.trim() || q.options[2];
-          const tD = parts[4]?.trim() || q.options[3];
-          const tExp = parts.slice(5).join('|').trim() || q.explanation;
-          translatedQs.push({
-            ...q,
-            question: tQ,
-            options: [tA, tB, tC, tD],
-            explanation: tExp
-          });
-        } catch {
-          translatedQs.push(q);
-        }
-        await new Promise(r => setTimeout(r, 150)); // 150ms gap
-      }
-      return res.json({ success: true, provider: 'local_fallback_translated', topic: actualTopic, questions: translatedQs });
-    } catch (e) { console.error('Question translation failed:', e.message); }
-  }
-
-  res.json({ success: true, provider: 'local_fallback', topic: actualTopic, questions: fallbackQs });
-});
+// Redundant first practice questions endpoint removed to consolidate logic in the active endpoint below.
 
 // 4. Feynman Socratic Discussion
 app.post('/api/learning/feynman/start', (req, res) => {
@@ -3240,10 +3086,35 @@ app.post('/api/learning/rag-search', async (req, res) => {
 });
 
 // ----------------------------------------------------
-// 📝 PRACTICE QUESTIONS ENDPOINT (MULTILINGUAL)
+// 📝 PRACTICE QUESTIONS ENDPOINT (MULTILINGUAL & ADAPTIVE)
+// ----------------------------------------------------
+// ── UNIQUE QUESTION ARCHITECTURE HISTORY REGISTRY ──────────────────────────
+const globalQuestionHistory = []; // Array of { question: string, topic: string, difficulty: string, timestamp: number }
+
+function calculateJaccardSimilarity(str1, str2) {
+  if (!str1 || !str2) return 0;
+  const getWords = (str) => {
+    return new Set(
+      str.toLowerCase()
+        .replace(/[^\w\s\u0900-\u097F]/g, '') // Keep alphanumeric and Devanagari script characters
+        .split(/\s+/)
+        .filter(w => w.length > 2 && !['and', 'the', 'for', 'with', 'what', 'which', 'their', 'from', 'this', 'that', 'these', 'those'].includes(w))
+    );
+  };
+  const set1 = getWords(str1);
+  const set2 = getWords(str2);
+  if (set1.size === 0 || set2.size === 0) return 0;
+  
+  const intersection = new Set([...set1].filter(x => set2.has(x)));
+  const union = new Set([...set1, ...set2]);
+  return intersection.size / union.size;
+}
+
+// ----------------------------------------------------
+// 📝 PRACTICE QUESTIONS ENDPOINT (MULTILINGUAL, UNIQUE & ADAPTIVE)
 // ----------------------------------------------------
 app.post('/api/learning/practice/questions', async (req, res) => {
-  const { topic, language, classLevel, subject, chapter, difficulty, numQuestions } = req.body;
+  const { topic, language, classLevel, subject, chapter, difficulty, numQuestions, questionCount, previousQuestions, sessionUuid } = req.body;
 
   const cl = classLevel || 8;
   const lang = language || 'en';
@@ -3252,7 +3123,11 @@ app.post('/api/learning/practice/questions', async (req, res) => {
   const actualSubject = subject || 'Science';
   const actualChapter = chapter || '';
   const diff = ['easy', 'medium', 'hard'].includes(difficulty) ? difficulty : 'medium';
-  const nq = Math.min(Math.max(parseInt(numQuestions) || 8, 5), 20);
+  
+  // Accept both questionCount (strict count control) and numQuestions
+  const nq = Math.min(Math.max(parseInt(questionCount || numQuestions) || 8, 5), 20);
+
+  console.log(`[UniqueQuiz Engine] Received request. Session: ${sessionUuid || 'N/A'}, Topic: ${actualTopic}, Class: ${cl}, Diff: ${diff}, Qs: ${nq}`);
 
   const diffDescriptions = {
     easy:   `Basic recall and definitions. \"What is\" and simple fact questions. Class ${cl} foundational level. One clearly correct answer.`,
@@ -3260,89 +3135,1524 @@ app.post('/api/learning/practice/questions', async (req, res) => {
     hard:   `Analysis, synthesis and HOTS (Higher Order Thinking Skills). Tricky distractors. Advanced Class ${cl} level. Requires deep understanding.`
   };
 
-  const systemPrompt = `You are a NCERT curriculum practice question generator for Indian school students.
+  const shuffleOptions = (options, correctLetter) => {
+    const letters = ['A', 'B', 'C', 'D'];
+    const prefixRegex = /^[A-D]\)\s*/i;
+    const rawOptions = options.map(o => o.replace(prefixRegex, '').trim());
+    const correctText = options.find(o => o.startsWith(correctLetter))?.replace(prefixRegex, '').trim() || correctLetter;
+
+    const shuffled = [...rawOptions];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+
+    let newCorrect = 'A';
+    const newOptions = shuffled.map((o, idx) => {
+      const letter = letters[idx];
+      if (o === correctText) newCorrect = letter;
+      return `${letter}) ${o}`;
+    });
+
+    return { options: newOptions, correctOption: newCorrect };
+  };
+
+  const randomChoice = (arr) => arr[Math.floor(Math.random() * arr.length)];
+  const randomSample = (arr, n) => {
+    const shuffled = [...arr].sort(() => 0.5 - Math.random());
+    return shuffled.slice(0, n);
+  };
+
+  // Final prepared list of questions to return
+  let preparedQuestions = [];
+  let rejectedCount = 0;
+  let hasLlmRun = false;
+  let lastLlmProvider = null;
+
+  // Split nq into batches of at most 8 to prevent token limits/truncation issues
+  const batchSizes = [];
+  let remaining = nq;
+  while (remaining > 0) {
+    const bSize = Math.min(remaining, 8);
+    batchSizes.push(bSize);
+    remaining -= bSize;
+  }
+
+  for (let b = 0; b < batchSizes.length; b++) {
+    const currentBatchSize = batchSizes[b];
+    
+    // Accumulate exclusions: original history + questions prepared in previous batches
+    const allExclusions = [
+      ...(previousQuestions || []),
+      ...preparedQuestions.map(q => q.question)
+    ];
+
+    const systemPrompt = `You are a NCERT curriculum practice question generator for Indian school students.
 
 CRITICAL LANGUAGE INSTRUCTION: ALL question text, ALL option text, and ALL explanation text MUST be written ENTIRELY in ${langName}. Do NOT use English unless the selected language IS English. Use the native script (Devanagari for Hindi, Assamese script for Assamese, Tamil script for Tamil, Bengali script for Bengali, Telugu script for Telugu, etc.). This is MANDATORY — failure to use ${langName} script is unacceptable.
 
-Generate exactly ${nq} practice questions on the topic "${actualTopic}" from NCERT Class ${cl} subject "${actualSubject}"${actualChapter ? `, chapter "${actualChapter}"` : ''}.
+Generate EXACTLY ${currentBatchSize} unique practice questions on the topic "${actualTopic}" from NCERT Class ${cl} subject "${actualSubject}"${actualChapter ? `, chapter "${actualChapter}"` : ''}.
 
 Difficulty Level: ${diff.toUpperCase()}
 Difficulty Description: ${diffDescriptions[diff]}
 
-Rules:
-- Every single word of questions, options and explanations MUST be in ${langName}
-- Questions must be curriculum-accurate for Class ${cl} NCERT
-- Include a mix: at least ${Math.ceil(nq * 0.6)} MCQ, rest can be True/False or fill-in-blank
-- 4 options per MCQ labeled A), B), C), D)
-- correctOption must be 'A', 'B', 'C', or 'D' (just the letter)
-- No repeated questions
-- For 'hard' difficulty: use tricky distractors and higher-order thinking
+${allExclusions.length > 0 ? `STRICT MEMORY EXCLUSION RULE:
+Do NOT generate any of the following questions (avoid similar wording, concepts, or identical logic):
+${allExclusions.map((q, idx) => `${idx + 1}. "${q}"`).join('\n')}
+Make sure all new questions are completely unique variations.` : ''}
 
-Return ONLY a valid JSON array (no markdown, no extra text):
+Rules:
+- Every single word of questions, options, explanations, and hints MUST be in ${langName}.
+- Questions must be curriculum-accurate for Class ${cl} NCERT.
+- Include a diverse mix of question types: at least ${Math.ceil(currentBatchSize * 0.4)} MCQ, at least ${Math.ceil(currentBatchSize * 0.2)} True/False ('tf'), at least ${Math.ceil(currentBatchSize * 0.1)} Fill-in-the-blanks ('fill'), and at least ${Math.ceil(currentBatchSize * 0.1)} Assertion-Reasoning ('ar').
+- MCQ and Assertion-Reasoning ('ar') must have exactly 4 options labeled A), B), C), D).
+- True/False ('tf') must have exactly 2 options: ["A) True", "B) False"] (or localized in ${langName}).
+- Fill-in-the-blanks ('fill') must have options = [] (empty array) and correctOption must be the exact correct word or short phrase, and the question should contain a '___' placeholder.
+- correctOption for MCQ, tf, and ar must be 'A', 'B', 'C', or 'D' (just the letter).
+- Shuffling: Randomly shuffle which option is correct (do not always make A or B correct).
+- No repeated questions or options.
+- Add an 'explanation' field showing why the correct answer is right, including a 'chapterReference' (e.g. "Chapter 1, Page 4") and a 'quickRevisionNote' (a short memory tip for exams).
+- For 'hard' difficulty: use scenario-based critical thinking and multi-step reasoning.
+
+Return ONLY a valid JSON array of objects (no markdown, no extra text, no code fences):
 [
   {
     "questionNumber": 1,
     "type": "mcq",
     "question": "Question text entirely in ${langName}",
-    "options": ["A) Option A in ${langName}", "B) Option B in ${langName}", "C) Option C in ${langName}", "D) Option D in ${langName}"],
-    "correctOption": "A",
-    "explanation": "Explanation in ${langName}"
+    "options": ["A) Option A", "B) Option B", "C) Option C", "D) Option D"],
+    "correctOption": "C",
+    "explanation": "Explanation in ${langName}",
+    "chapterReference": "Chapter reference in ${langName}",
+    "quickRevisionNote": "Revision note in ${langName}"
   }
 ]`;
 
-  const llmResponse = await queryLLMChain(
-    `PracticeQ:${cl}:${actualSubject}:${actualTopic}:${lang}:${diff}:${nq}`,
-    systemPrompt,
-    10000
-  );
-
-  if (llmResponse) {
-    try {
-      let cleanText = llmResponse.text.trim();
-      if (cleanText.startsWith('```json')) cleanText = cleanText.slice(7);
-      if (cleanText.startsWith('```')) cleanText = cleanText.slice(3);
-      if (cleanText.endsWith('```')) cleanText = cleanText.slice(0, -3);
-      const parsed = JSON.parse(cleanText.trim());
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return res.json({ success: true, provider: llmResponse.provider, questions: parsed });
+    // Caching bypass key per batch
+    const uniqueKey = `PracticeQ:${cl}:${actualSubject}:${actualTopic}:${lang}:${diff}:${currentBatchSize}:${b}:${Date.now()}:${Math.random().toString(36).substring(2, 7)}`;
+    
+    let llmResponse = null;
+    let attempts = 0;
+    while (attempts < 2) {
+      attempts++;
+      try {
+        console.log(`[UniqueQuiz Engine] Batch ${b+1}/${batchSizes.length}: Querying LLM for ${currentBatchSize} questions (attempt ${attempts})...`);
+        llmResponse = await queryLLMChain(uniqueKey, systemPrompt, 7000);
+        if (llmResponse) {
+          let cleanText = llmResponse.text.trim();
+          if (cleanText.startsWith('```json')) cleanText = cleanText.slice(7);
+          if (cleanText.startsWith('```')) cleanText = cleanText.slice(3);
+          if (cleanText.endsWith('```')) cleanText = cleanText.slice(0, -3);
+          const parsed = JSON.parse(cleanText.trim());
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            break;
+          }
+        }
+      } catch (err) {
+        console.warn(`[UniqueQuiz Engine] Batch ${b+1} attempt ${attempts} failed:`, err.message);
+        llmResponse = null;
       }
-    } catch (e) {
-      console.error('Failed to parse practice questions LLM response:', e.message);
+    }
+
+    if (llmResponse) {
+      hasLlmRun = true;
+      lastLlmProvider = llmResponse.provider;
+      try {
+        let cleanText = llmResponse.text.trim();
+        if (cleanText.startsWith('```json')) cleanText = cleanText.slice(7);
+        if (cleanText.startsWith('```')) cleanText = cleanText.slice(3);
+        if (cleanText.endsWith('```')) cleanText = cleanText.slice(0, -3);
+        const parsed = JSON.parse(cleanText.trim());
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          console.log(`[UniqueQuiz Engine] Batch ${b+1} returned ${parsed.length} raw questions.`);
+          for (const qItem of parsed) {
+            let isDuplicate = false;
+            
+            // Check already prepared in this request
+            for (const prepQ of preparedQuestions) {
+              if (calculateJaccardSimilarity(qItem.question, prepQ.question) > 0.35) {
+                isDuplicate = true;
+                break;
+              }
+            }
+            // Check session history
+            if (!isDuplicate) {
+              for (const pastQ of previousQuestions || []) {
+                if (calculateJaccardSimilarity(qItem.question, pastQ) > 0.35) {
+                  isDuplicate = true;
+                  break;
+                }
+              }
+            }
+            // Check global history
+            if (!isDuplicate) {
+              for (const entry of globalQuestionHistory) {
+                if (calculateJaccardSimilarity(qItem.question, entry.question) > 0.35) {
+                  isDuplicate = true;
+                  break;
+                }
+              }
+            }
+
+            if (isDuplicate) {
+              rejectedCount++;
+              console.log(`[UniqueQuiz Engine] Duplicate rejected: "${qItem.question}"`);
+            } else {
+              let processedQ = { ...qItem };
+              if (processedQ.type === 'mcq' || processedQ.type === 'ar' || processedQ.type === 'tf') {
+                const sh = shuffleOptions(processedQ.options, processedQ.correctOption);
+                processedQ.options = sh.options;
+                processedQ.correctOption = sh.correctOption;
+              }
+              preparedQuestions.push(processedQ);
+              globalQuestionHistory.push({
+                question: processedQ.question,
+                topic: actualTopic,
+                difficulty: diff,
+                timestamp: Date.now()
+              });
+            }
+          }
+        }
+      } catch (e) {
+        console.error(`[UniqueQuiz Engine] Failed to parse batch ${b+1} LLM response:`, e.message);
+      }
     }
   }
 
-  // Language-aware fallback question templates
-  const fallbackTemplates = {
-    en: (t, s, cl) => ([
-      { questionNumber: 1, type: 'mcq', question: `What is the primary purpose of ${t} in ${s}?`, options: ['A) To store energy', 'B) To perform the core function described by NCERT', 'C) To release waste products', 'D) To absorb minerals from soil'], correctOption: 'B', explanation: `According to NCERT Class ${cl} ${s}, the primary purpose is the core function that defines ${t}.` },
-      { questionNumber: 2, type: 'mcq', question: `Which of the following is NOT related to ${t}?`, options: ['A) Core process of the concept', 'B) Main component involved', 'C) An unrelated external factor', 'D) Key product or output'], correctOption: 'C', explanation: `The unrelated external factor is not covered in the ${t} chapter of Class ${cl} ${s}.` },
-      { questionNumber: 3, type: 'mcq', question: `Where does ${t} primarily occur in the organism or system?`, options: ['A) Only on the external surface', 'B) In the core organ or organelle described by NCERT', 'C) Only in blood or body fluid', 'D) In the external environment'], correctOption: 'B', explanation: `NCERT states that ${t} occurs in the specific organ or organelle designated for this process in Class ${cl} ${s}.` },
-      { questionNumber: 4, type: 'mcq', question: `What are the main raw materials required for ${t}?`, options: ['A) Only water and mineral salts', 'B) Only sunlight and air', 'C) The specific inputs defined in NCERT for this process', 'D) Only soil minerals'], correctOption: 'C', explanation: `The NCERT textbook for Class ${cl} lists the specific raw materials for ${t}.` },
-      { questionNumber: 5, type: 'mcq', question: `What is the main output of ${t}?`, options: ['A) Carbon dioxide and heat only', 'B) The primary product described in NCERT', 'C) Mineral salts only', 'D) Nothing — it is a passive process'], correctOption: 'B', explanation: `According to NCERT Class ${cl} ${s}, ${t} produces the primary product central to this concept.` },
-      { questionNumber: 6, type: 'mcq', question: `Which factor does NOT affect the rate of ${t}?`, options: ['A) Temperature', 'B) Availability of raw materials', "C) The observer's clothing colour", 'D) Light intensity or pressure'], correctOption: 'C', explanation: `The observer's clothing colour is irrelevant. Actual factors are temperature, raw materials, and light or pressure.` },
-      { questionNumber: 7, type: 'mcq', question: `Why is ${t} important for living organisms and the environment?`, options: ['A) It has no real importance', 'B) It provides the core benefit described in NCERT', 'C) It only benefits non-living matter', 'D) It destroys environmental balance'], correctOption: 'B', explanation: `NCERT highlights ${t} as important because it provides the core benefit that sustains life and the environment.` },
-      { questionNumber: 8, type: 'mcq', question: `According to NCERT Class ${cl}, ${t} can be classified into how many main types?`, options: ['A) Only one type', 'B) Exactly two main types', 'C) Multiple types as described in the chapter', 'D) No classification exists'], correctOption: 'C', explanation: `NCERT describes multiple types of ${t} based on characteristics, mechanisms, or applications in Class ${cl} ${s}.` },
-    ]),
-    hi: (t, s, cl) => ([
-      { questionNumber: 1, type: 'mcq', question: `${s} में ${t} का मुख्य उद्देश्य क्या है?`, options: ['A) ऊर्जा संग्रहीत करना', 'B) NCERT द्वारा वर्णित मुख्य कार्य करना', 'C) अपशिष्ट उत्पाद छोड़ना', 'D) मिट्टी से खनिज अवशोषित करना'], correctOption: 'B', explanation: `NCERT कक्षा ${cl} ${s} के अनुसार, ${t} का मुख्य उद्देश्य वह मुख्य कार्य है जो इस अवधारणा को परिभाषित करता है।` },
-      { questionNumber: 2, type: 'mcq', question: `निम्नलिखित में से कौन सा ${t} से संबंधित नहीं है?`, options: ['A) अवधारणा की मुख्य प्रक्रिया', 'B) इसमें शामिल मुख्य घटक', 'C) एक असंबंधित बाहरी कारक', 'D) मुख्य उत्पाद या आउटपुट'], correctOption: 'C', explanation: `असंबंधित बाहरी कारक कक्षा ${cl} ${s} के ${t} अध्याय में शामिल नहीं है।` },
-      { questionNumber: 3, type: 'mcq', question: `${t} मुख्य रूप से किस अंग या प्रणाली में होता है?`, options: ['A) केवल बाहरी सतह पर', 'B) NCERT द्वारा वर्णित मुख्य अंग या कोशिकांग में', 'C) केवल रक्त या शरीर द्रव में', 'D) बाहरी वातावरण में'], correctOption: 'B', explanation: `NCERT कहता है कि ${t} उस विशेष अंग या कोशिकांग में होता है जो कक्षा ${cl} में इस प्रक्रिया के लिए निर्दिष्ट है।` },
-      { questionNumber: 4, type: 'mcq', question: `${t} के लिए आवश्यक मुख्य कच्चे माल क्या हैं?`, options: ['A) केवल जल और खनिज लवण', 'B) केवल सूर्य का प्रकाश और वायु', 'C) NCERT में इस प्रक्रिया के लिए परिभाषित विशेष सामग्री', 'D) केवल मृदा खनिज'], correctOption: 'C', explanation: `कक्षा ${cl} की NCERT पाठ्यपुस्तक ${t} के लिए विशेष कच्चे माल सूचीबद्ध करती है।` },
-      { questionNumber: 5, type: 'mcq', question: `${t} का मुख्य उत्पाद क्या है?`, options: ['A) केवल कार्बन डाइऑक्साइड और ऊष्मा', 'B) NCERT में वर्णित प्राथमिक उत्पाद', 'C) केवल खनिज लवण', 'D) कुछ नहीं — यह एक निष्क्रिय प्रक्रिया है'], correctOption: 'B', explanation: `NCERT कक्षा ${cl} ${s} के अनुसार, ${t} वह प्राथमिक उत्पाद बनाता है जो इस अवधारणा के केंद्र में है।` },
-      { questionNumber: 6, type: 'mcq', question: `कौन सा कारक ${t} की दर को प्रभावित नहीं करता?`, options: ['A) तापमान', 'B) कच्चे माल की उपलब्धता', 'C) पर्यवेक्षक के वस्त्र का रंग', 'D) प्रकाश की तीव्रता या दबाव'], correctOption: 'C', explanation: `पर्यवेक्षक के वस्त्र का रंग अप्रासंगिक है। वास्तविक कारक तापमान, कच्चे माल और प्रकाश हैं।` },
-      { questionNumber: 7, type: 'mcq', question: `${t} जीवित प्राणियों और पर्यावरण के लिए क्यों महत्वपूर्ण है?`, options: ['A) इसका कोई वास्तविक महत्व नहीं है', 'B) यह NCERT में वर्णित मुख्य लाभ प्रदान करता है', 'C) यह केवल निर्जीव पदार्थ को लाभ देता है', 'D) यह पर्यावरणीय संतुलन को नष्ट करता है'], correctOption: 'B', explanation: `NCERT बताता है कि ${t} जीवन और पर्यावरण को बनाए रखने वाला मुख्य लाभ प्रदान करता है।` },
-      { questionNumber: 8, type: 'mcq', question: `NCERT कक्षा ${cl} के अनुसार, ${t} को कितने मुख्य प्रकारों में वर्गीकृत किया जा सकता है?`, options: ['A) केवल एक प्रकार', 'B) ठीक दो मुख्य प्रकार', 'C) अध्याय में वर्णित अनेक प्रकार', 'D) कोई वर्गीकरण नहीं है'], correctOption: 'C', explanation: `NCERT विभिन्न विशेषताओं, तंत्रों या अनुप्रयोगों के आधार पर ${t} के अनेक प्रकार बताता है।` },
-    ]),
+  const buildDynamicFallbackQs = (topic, subject, classLevel, difficultyLevel) => {
+    const tLower = topic.toLowerCase();
+    const cl = classLevel || 8;
+    const s = subject || 'Science';
+
+    const implementsDistractors = [
+      'Combine harvester in manual mode',
+      'Thresher drawn by hand',
+      'Sickle used for sowing seeds',
+      'Manually adding chemical salts',
+      'Waterlogging the fields daily',
+      'Sprinkling pesticides over roots',
+      'Harvesting standing grain with a shovel',
+      'Ploughing the field with a thresher',
+      'Sowing seeds at unequal depth by hand',
+      'Pesticide application drone'
+    ];
+
+    const photosynthesisDistractors = [
+      'Breakdown of glucose for energy',
+      'Absorption of minerals from soil',
+      'Gas exchange through roots',
+      'Releasing carbon dioxide into the soil',
+      'Transporting starch to the petals',
+      'Storing water in the bark',
+      'Producing nitrogen gas',
+      'Absorbing oxygen through the stomata',
+      'Breaking down chlorophyll',
+      'Generating ATP in complete darkness'
+    ];
+
+    const questionsList = [];
+
+    if (tLower.includes('agricultural') || tLower.includes('implement') || tLower.includes('crop') || tLower.includes('farm')) {
+      const subtopics = [
+        {
+          name: 'traditional ploughing tools',
+          easy: [
+            () => {
+              const action = randomChoice(['loosen and turn', 'prepare and tilt', 'churn and aerate']);
+              const correct = randomChoice(['Plough (Hala)', 'Wooden Plough', 'Hoe (Kudali)']);
+              const distracts = randomSample(implementsDistractors, 3);
+              return {
+                type: 'mcq',
+                question: `Which traditional tool is most commonly used to ${action} the soil?`,
+                options: [`A) ${correct}`, `B) ${distracts[0]}`, `C) ${distracts[1]}`, `D) ${distracts[2]}`],
+                correctOption: 'A',
+                explanation: `A traditional plough is used to tilt and ${action} the soil, allowing plant roots to breathe.`,
+                chapterReference: 'Chapter 1, Page 3',
+                quickRevisionNote: 'Ploughing = Soil aeration & prep.'
+              };
+            },
+            () => ({
+              type: 'tf',
+              question: 'A hoe is a simple tool that is traditionally used for removing weeds and loosening the soil.',
+              options: ['A) True', 'B) False'],
+              correctOption: 'A',
+              explanation: 'A hoe consists of a long rod of wood or iron with a strong, broad bent plate of iron fixed to one of its ends, acting like a blade.',
+              chapterReference: 'Chapter 1, Page 3',
+              quickRevisionNote: 'Hoe = weeding & loosening.'
+            })
+          ],
+          medium: [
+            () => {
+              const reason = randomChoice([
+                'cost-effective and easily crafted locally by village carpenters',
+                'lightweight and easily pulled by native bullocks',
+                'efficient for shallow aeration in small plots'
+              ]);
+              return {
+                type: 'ar',
+                question: `Assertion: Traditional wooden ploughs are still widely used by small-scale farmers in India. Reason: Wooden ploughs are ${reason}.`,
+                options: [
+                  'A) Both A and R are true and R is the correct explanation of A',
+                  'B) Both A and R are true but R is not the correct explanation of A',
+                  'C) A is true but R is false',
+                  'D) A is false but R is true'
+                ],
+                correctOption: 'A',
+                explanation: `Wooden ploughs are inexpensive, made of local wood and iron, and easily drawn by pair of bulls. Both statements are true and related.`,
+                chapterReference: 'Chapter 1, Page 3',
+                quickRevisionNote: 'Wooden Plough = Affordable for smallholder farmers.'
+              };
+            },
+            () => ({
+              type: 'mcq',
+              question: 'What is the wooden log called that is placed on the bulls necks when pulling a traditional plough?',
+              options: ['A) Beam', 'B) Ploughshaft', 'C) Ploughshare', 'D) Hoe blade'],
+              correctOption: 'A',
+              explanation: 'The beam is the part of the plough placed on the bulls necks. The long wooden part is the ploughshaft, and the iron tip is the ploughshare.',
+              chapterReference: 'Chapter 1, Page 3',
+              quickRevisionNote: 'Beam = neck log; Ploughshaft = body; Ploughshare = iron tip.'
+            })
+          ],
+          hard: [
+            () => {
+              const cropType = randomChoice(['monsoon wheat', 'dry-season gram', 'paddy fields']);
+              return {
+                type: 'mcq',
+                question: `A smallholder farmer in an arid region wants to cultivate ${cropType} but has no access to tractors. To prepare the soil while retaining subsoil moisture, which implement sequence should they use?`,
+                options: [
+                  'A) A wooden plough followed by a leveling board to trap moisture',
+                  'B) Deep tractor cultivation with zero compaction',
+                  'C) Sprinkling chemical salts to dry the crumbs',
+                  'D) Sowing directly using an electric combine harvester'
+                ],
+                correctOption: 'A',
+                explanation: `Ploughing loosens the soil, and immediate leveling breaks crumbs and seals the surface to prevent moisture evaporation.`,
+                chapterReference: 'Chapter 1, Page 4',
+                quickRevisionNote: 'Leveling = Soil moisture conservation.'
+              };
+            },
+            () => ({
+              type: 'mcq',
+              question: 'Why does a traditional wooden plough feature an iron-tipped ploughshare instead of pure wood for tilling hard-packed clay soils?',
+              options: [
+                'A) To resist wear and penetrate dense soil crusts effectively',
+                'B) To conduct soil electricity to dry roots',
+                'C) To chemical fertilize the soil naturally',
+                'D) To lightweight the tool for easy carriage'
+              ],
+              correctOption: 'A',
+              explanation: 'The ploughshare is the strong triangular iron strip. Wood would splinter or wear down quickly under the friction of clay tilling.',
+              chapterReference: 'Chapter 1, Page 3',
+              quickRevisionNote: 'Ploughshare is iron-tipped for durability.'
+            }),
+            () => ({
+              type: 'ar',
+              question: 'Assertion: Manual tilling using a hoe is highly preferred for clearing weeds in closely spaced vegetable rows. Reason: A large tractor cultivator would damage crop root systems due to bulk spacing constraints.',
+              options: [
+                'A) Both A and R are true and R is the correct explanation of A',
+                'B) Both A and R are true but R is not the correct explanation of A',
+                'C) A is true but R is false',
+                'D) A is false but R is true'
+              ],
+              correctOption: 'A',
+              explanation: 'Manual weeding tools are precise and prevent collateral damage to delicate crops where machine tires cannot fit.',
+              chapterReference: 'Chapter 1, Page 3',
+              quickRevisionNote: 'Hoe = high precision weeding.'
+            })
+          ]
+        },
+        {
+          name: 'modern seed drill machinery',
+          easy: [
+            () => ({
+              type: 'tf',
+              question: 'A modern seed drill is attached to tractors to sow seeds at uniform distance and depth.',
+              options: ['A) True', 'B) False'],
+              correctOption: 'A',
+              explanation: 'Seed drills save time and protect seeds from being eaten by birds by covering them with soil.',
+              chapterReference: 'Chapter 1, Page 4',
+              quickRevisionNote: 'Seed Drill = Uniform sowing & depth.'
+            }),
+            () => ({
+              type: 'fill',
+              question: 'The traditional tool for sowing seeds is shaped like a ___ and is filled with seeds.',
+              options: [],
+              correctOption: 'funnel',
+              explanation: 'The traditional tool has a funnel-like top where seeds are passed down through two or three pipes with sharp ends.',
+              chapterReference: 'Chapter 1, Page 4',
+              quickRevisionNote: 'Traditional sowing = funnel tool.'
+            })
+          ],
+          medium: [
+            () => {
+              const benefit = randomChoice(['saves labor and time', 'protects seeds from birds', 'prevents overcrowding of plants']);
+              return {
+                type: 'mcq',
+                question: `Why is using a tractor-drawn seed drill preferred over manual broadcasting (throwing seeds by hand)?`,
+                options: [
+                  `A) It ${benefit} by maintaining uniform distance`,
+                  'B) It automatically harvests the crops',
+                  'C) It destroys soil nutrients to kill pests',
+                  'D) It requires no tractor power at all'
+                ],
+                correctOption: 'A',
+                explanation: 'Broadcasting results in uneven distribution and leaves seeds exposed. Seed drills cover them and distribute them evenly.',
+                chapterReference: 'Chapter 1, Page 4',
+                quickRevisionNote: 'Seed drill prevents overcrowding.'
+              };
+            },
+            () => ({
+              type: 'tf',
+              question: 'Broadcasting seeds manually ensures that all seeds are covered with soil to protect them from birds.',
+              options: ['A) True', 'B) False'],
+              correctOption: 'B',
+              explanation: 'Manual broadcasting leaves many seeds on the soil surface, exposing them to birds and dry heat.',
+              chapterReference: 'Chapter 1, Page 4',
+              quickRevisionNote: 'Broadcasting = poor soil coverage.'
+            })
+          ],
+          hard: [
+            () => ({
+              type: 'ar',
+              question: 'Assertion: Overcrowding of plants during sowing reduces crop yield. Reason: Overcrowded plants compete intensely for sunlight, nutrients, and water.',
+              options: [
+                'A) Both A and R are true and R is the correct explanation of A',
+                'B) Both A and R are true but R is not the correct explanation of A',
+                'C) A is true but R is false',
+                'D) A is false but R is true'
+              ],
+              correctOption: 'A',
+              explanation: 'To prevent competition, seeds must be sown at uniform distances so each plant receives sufficient nutrients and light.',
+              chapterReference: 'Chapter 1, Page 4',
+              quickRevisionNote: 'Overcrowding = Nutrient stress.'
+            }),
+            () => ({
+              type: 'mcq',
+              question: 'How does a tractor-drawn modern seed drill prevent bird damage to newly sown wheat seeds?',
+              options: [
+                'A) By covering the seeds with soil immediately after deposition',
+                'B) By emitting a high-frequency scarecrow sound',
+                'C) By mixing seed coats with bird-repelling chemical toxins',
+                'D) By planting the seeds deep in groundwater levels'
+              ],
+              correctOption: 'A',
+              explanation: 'The seed drill has tubes that deposit seeds and trailing parts that immediately cover them with loose soil.',
+              chapterReference: 'Chapter 1, Page 4',
+              quickRevisionNote: 'Covering seeds protects from birds.'
+            }),
+            () => ({
+              type: 'mcq',
+              question: 'In a agricultural trial comparing broadcasting with seed drill sowing, why did the seed drill group exhibit a 40% higher germination rate?',
+              options: [
+                'A) Consistent soil depth and uniform moisture contact',
+                'B) The seed drill injects growth hormones into the seed coat',
+                'C) Seed drills attract solar energy to heat the soil',
+                'D) Seed drills prevent the growth of all weeds automatically'
+              ],
+              correctOption: 'A',
+              explanation: 'Uniform depth guarantees that seeds remain in the moist root zone without drying out on the surface.',
+              chapterReference: 'Chapter 1, Page 4',
+              quickRevisionNote: 'Depth consistency = higher germination.'
+            })
+          ]
+        },
+        {
+          name: 'irrigation systems',
+          easy: [
+            () => ({
+              type: 'fill',
+              question: 'The modern method of irrigation that delivers water drop-by-drop at the base of roots is called ___ irrigation.',
+              options: [],
+              correctOption: 'Drip',
+              explanation: 'Drip irrigation delivers water directly to root zones, minimizing evaporation.',
+              chapterReference: 'Chapter 1, Page 4',
+              quickRevisionNote: 'Drip = Drop-by-drop at roots.'
+            }),
+            () => ({
+              type: 'mcq',
+              question: 'Which of the following is a traditional method of irrigation?',
+              options: ['A) Moat (Pulley system)', 'B) Drip system', 'C) Sprinkler system', 'D) Central pivot system'],
+              correctOption: 'A',
+              explanation: 'Moat, Chain pump, Dhekli, and Rahat are traditional, cheaper but less efficient irrigation systems.',
+              chapterReference: 'Chapter 1, Page 5',
+              quickRevisionNote: 'Moat = traditional pulley.'
+            })
+          ],
+          medium: [
+            () => {
+              const soilType = randomChoice(['sandy soil', 'loamy soil', 'clayey soil']);
+              return {
+                type: 'mcq',
+                question: `Which irrigation system is highly recommended for watering crops in ${soilType} where water availability is very poor?`,
+                options: [
+                  'A) Drip irrigation system',
+                  'B) Traditional moat pulley system',
+                  'C) Regular manual flooding',
+                  'D) Persian wheel (Rahat)'
+                ],
+                correctOption: 'A',
+                explanation: 'Drip systems are water-efficient and ideal for arid zones and sandy soils with low water retention.',
+                chapterReference: 'Chapter 1, Page 5',
+                quickRevisionNote: 'Sandy/Arid irrigation = Drip.'
+              };
+            },
+            () => ({
+              type: 'tf',
+              question: 'Sprinkler irrigation is best suited for sandy soil because it has low water-retaining capacity.',
+              options: ['A) True', 'B) False'],
+              correctOption: 'A',
+              explanation: 'On sandy soils, water runs off or sinks too fast. Sprinklers apply water slowly like rain, allowing absorption.',
+              chapterReference: 'Chapter 1, Page 5',
+              quickRevisionNote: 'Sprinkler = suitable for sandy soil.'
+            })
+          ],
+          hard: [
+            () => ({
+              type: 'ar',
+              question: 'Assertion: Sprinkler irrigation is highly effective on uneven land surfaces. Reason: Sprinklers mimic natural rain and do not require level fields.',
+              options: [
+                'A) Both A and R are true and R is the correct explanation of A',
+                'B) Both A and R are true but R is not the correct explanation of A',
+                'C) A is true but R is false',
+                'D) A is false but R is true'
+              ],
+              correctOption: 'A',
+              explanation: 'Sprinkler pipes spray water over uneven topography efficiently without leveling costs.',
+              chapterReference: 'Chapter 1, Page 5',
+              quickRevisionNote: 'Sprinklers = Uneven land irrigation.'
+            }),
+            () => ({
+              type: 'mcq',
+              question: 'Why is the traditional pulley system (Moat) unsuitable for large-scale modern commercial farming of high-yield crops?',
+              options: [
+                'A) It is extremely slow, labor-intensive, and provides highly uneven water distribution',
+                'B) It alters the chemical composition of groundwater',
+                'C) It is banned by environmental protection laws in India',
+                'D) It requires expensive solar panels to run'
+              ],
+              correctOption: 'A',
+              explanation: 'Traditional systems use cattle or human labor, lifting limited volumes of water, which is insufficient for large acreages.',
+              chapterReference: 'Chapter 1, Page 5',
+              quickRevisionNote: 'Moat = low capacity pulley system.'
+            }),
+            () => ({
+              type: 'mcq',
+              question: 'How does drip irrigation prevent weed growth compared to standard flood irrigation methods?',
+              options: [
+                'A) By confining water delivery to the crop root base, leaving surrounding soil dry',
+                'B) By mixing weed-killer chemicals directly into the water supply',
+                'C) By boiling the water before application to sterilize seeds',
+                'D) By blocking sunlight with black rubber hoses'
+              ],
+              correctOption: 'A',
+              explanation: 'Weed seeds in dry zones between rows fail to germinate due to lack of moisture, whereas flooding waters the entire field surface.',
+              chapterReference: 'Chapter 1, Page 6',
+              quickRevisionNote: 'Targeted watering limits weeds.'
+            })
+          ]
+        },
+        {
+          name: 'harvesting and winnowing',
+          easy: [
+            () => ({
+              type: 'mcq',
+              question: 'Which simple tool is traditionally used in India for manual harvesting of standing grain crops?',
+              options: ['A) Sickle (Daranti)', 'B) Plough', 'C) Seed Drill', 'D) Sprinkler Pipe'],
+              correctOption: 'A',
+              explanation: 'A sickle is a curved metal hand-tool used widely for traditional harvesting.',
+              chapterReference: 'Chapter 1, Page 5',
+              quickRevisionNote: 'Sickle = Manual harvesting.'
+            }),
+            () => ({
+              type: 'fill',
+              question: 'The process of separating the grain from the harvested crop is called ___.',
+              options: [],
+              correctOption: 'threshing',
+              explanation: 'Threshing is the process of loosening the edible part of grain from the scaly chaff.',
+              chapterReference: 'Chapter 1, Page 6',
+              quickRevisionNote: 'Separation = threshing.'
+            })
+          ],
+          medium: [
+            () => ({
+              type: 'mcq',
+              question: 'What is the process of separating grain seeds from the harvested chaff called?',
+              options: ['A) Threshing', 'B) Irrigation', 'C) Weeding', 'D) Ploughing'],
+              correctOption: 'A',
+              explanation: 'Threshing separates grains from chaff, often assisted by machines in modern times.',
+              chapterReference: 'Chapter 1, Page 5',
+              quickRevisionNote: 'Grain separation = Threshing.'
+            }),
+            () => ({
+              type: 'tf',
+              question: 'Winnowing is a process used by farmers with small holdings of land to separate grain and chaff.',
+              options: ['A) True', 'B) False'],
+              correctOption: 'A',
+              explanation: 'Farmers with small lands use wind winnowing machines or manual dropping in wind to blow away lighter chaff.',
+              chapterReference: 'Chapter 1, Page 6',
+              quickRevisionNote: 'Winnowing = wind chaff separation.'
+            })
+          ],
+          hard: [
+            () => ({
+              type: 'ar',
+              question: 'Assertion: Combine harvesters are highly favored by commercial grain farmers. Reason: Combine harvesters combine reaping, threshing, and winnowing into a single tractor-drawn operation.',
+              options: [
+                'A) Both A and R are true and R is the correct explanation of A',
+                'B) Both A and R are true but R is not the correct explanation of A',
+                'C) A is true but R is false',
+                'D) A is false but R is true'
+              ],
+              correctOption: 'A',
+              explanation: 'Combine harvesters increase productivity by executing three harvest steps in one machine operation.',
+              chapterReference: 'Chapter 1, Page 5',
+              quickRevisionNote: 'Combine = Reap + Thresh + Winnow.'
+            }),
+            () => ({
+              type: 'mcq',
+              question: 'Which mechanical process is specifically designed to separate the grain from the harvested chaff by utilizing differences in weight and wind currents?',
+              options: [
+                'A) Winnowing',
+                'B) Ploughing',
+                'C) Leveling',
+                'D) Broadcasting'
+              ],
+              correctOption: 'A',
+              explanation: 'Winnowing lets heavier grains fall straight down while the lighter chaff is blown away by the wind.',
+              chapterReference: 'Chapter 1, Page 6',
+              quickRevisionNote: 'Winnowing uses wind and gravity.'
+            }),
+            () => ({
+              type: 'mcq',
+              question: 'What is the key functional difference between a standalone thresher and a combine harvester?',
+              options: [
+                'A) A thresher only separates grain from husk, while a combine also cuts (reaps) the standing crop',
+                'B) A thresher is pulled by bullocks, while a combine is solar-powered',
+                'C) A thresher is used for irrigation, while a combine is used for sowing',
+                'D) A thresher is organic, while a combine harvester uses chemicals'
+              ],
+              correctOption: 'A',
+              explanation: 'A combine harvester integrates three processes: reaping, threshing, and winnowing, whereas a thresher requires the crop to be pre-cut.',
+              chapterReference: 'Chapter 1, Page 6',
+              quickRevisionNote: 'Combine = reaper + thresher.'
+            })
+          ]
+        },
+        {
+          name: 'fertilizers and manure',
+          easy: [
+            () => ({
+              type: 'mcq',
+              question: 'Which of the following organic substances is prepared directly in fields by decomposing plant and animal waste?',
+              options: ['A) Manure', 'B) Urea', 'C) Superphosphate', 'D) NPK Fertilizer'],
+              correctOption: 'A',
+              explanation: 'Manure is prepared naturally in fields through microbial decomposition of biological waste.',
+              chapterReference: 'Chapter 1, Page 4',
+              quickRevisionNote: 'Manure = Natural field-made.'
+            }),
+            () => ({
+              type: 'tf',
+              question: 'Manure provides a lot of organic matter (humus) to the soil.',
+              options: ['A) True', 'B) False'],
+              correctOption: 'A',
+              explanation: 'Manure is organic and decomposes to enrich the soil texture with biological humus.',
+              chapterReference: 'Chapter 1, Page 5',
+              quickRevisionNote: 'Manure adds humus.'
+            })
+          ],
+          medium: [
+            () => ({
+              type: 'tf',
+              question: 'Chemical fertilizers replenish organic matter (humus) to improve soil physical texture.',
+              options: ['A) True', 'B) False'],
+              correctOption: 'B',
+              explanation: 'Fertilizers are inorganic chemical salts. They do not add humus; only natural manure adds humus to the soil.',
+              chapterReference: 'Chapter 1, Page 4',
+              quickRevisionNote: 'Fertilizers do not add humus.'
+            }),
+            () => ({
+              type: 'mcq',
+              question: 'Which chemical element is NOT primarily supplied by NPK fertilizers?',
+              options: ['A) Calcium', 'B) Nitrogen', 'C) Phosphorus', 'D) Potassium'],
+              correctOption: 'A',
+              explanation: 'NPK stands for Nitrogen (N), Phosphorus (P), and Potassium (K).',
+              chapterReference: 'Chapter 1, Page 4',
+              quickRevisionNote: 'NPK = Nitrogen, Phosphorus, Potassium.'
+            })
+          ],
+          hard: [
+            () => ({
+              type: 'mcq',
+              question: 'What is the primary ecological drawback of using excessive chemical fertilizers over organic manures?',
+              options: [
+                'A) They alter soil pH and destroy natural soil micro-organisms',
+                'B) They cause crop stems to grow too tall to stand',
+                'C) They attract weed seeds to germinate',
+                'D) They increase soil moisture too rapidly'
+              ],
+              correctOption: 'A',
+              explanation: 'NPK salts degrade soil health over time by destroying natural soil biomes and altering acidity.',
+              chapterReference: 'Chapter 1, Page 4',
+              quickRevisionNote: 'Excess fertilizer destroys soil biome.'
+            }),
+            () => ({
+              type: 'mcq',
+              question: 'Why does composted manure improve sandy soil water-holding capacity, whereas chemical urea fails to do so?',
+              options: [
+                'A) Manure adds organic humus that acts like a sponge to bind soil particles',
+                'B) Urea chemical components evaporate water instantly',
+                'C) Manure prevents sunlight from heating the sand',
+                'D) Urea changes water molecules into gas'
+              ],
+              correctOption: 'A',
+              explanation: 'Humus coats sand grains, creating aggregates that trap and hold water film, while soluble fertilizers simply wash away.',
+              chapterReference: 'Chapter 1, Page 5',
+              quickRevisionNote: 'Humus acts as a sponge.'
+            }),
+            () => ({
+              type: 'ar',
+              question: 'Assertion: Crop rotation using leguminous plants reduces the demand for chemical nitrogenous fertilizers. Reason: Rhizobium bacteria in root nodules fix atmospheric nitrogen directly into the soil.',
+              options: [
+                'A) Both A and R are true and R is the correct explanation of A',
+                'B) Both A and R are true but R is not the correct explanation of A',
+                'C) A is true but R is false',
+                'D) A is false but R is true'
+              ],
+              correctOption: 'A',
+              explanation: 'Legumes associate symbiotically with Rhizobium, which restores nitrogen naturally, replacing synthetic chemical needs.',
+              chapterReference: 'Chapter 1, Page 5',
+              quickRevisionNote: 'Legumes rotate to add nitrogen.'
+            })
+          ]
+        }
+      ];
+
+      const difficultiesOrder = [difficultyLevel, ...['easy', 'medium', 'hard'].filter(d => d !== difficultyLevel)];
+      for (const diffVal of difficultiesOrder) {
+        for (const sub of subtopics) {
+          const creators = sub[diffVal];
+          if (Array.isArray(creators)) {
+            creators.forEach(c => questionsList.push(c()));
+          } else if (typeof creators === 'function') {
+            questionsList.push(creators());
+          }
+        }
+      }
+    }
+
+    else if (tLower.includes('photosynthesis') || tLower.includes('photo')) {
+      const subtopics = [
+        {
+          name: 'chlorophyll pigment',
+          easy: [
+            () => ({
+              type: 'tf',
+              question: 'Chlorophyll is the green pigment in leaves that absorbs solar energy.',
+              options: ['A) True', 'B) False'],
+              correctOption: 'A',
+              explanation: 'Chlorophyll captures solar energy to split water molecules during photosynthesis.',
+              chapterReference: 'Chapter 13, Page 211',
+              quickRevisionNote: 'Chlorophyll = Green light-absorber.'
+            }),
+            () => ({
+              type: 'fill',
+              question: 'The green pigment present in leaf cells that traps sunlight is ___.',
+              options: [],
+              correctOption: 'chlorophyll',
+              explanation: 'Chlorophyll is found inside chloroplasts and absorbs blue and red light.',
+              chapterReference: 'Chapter 13, Page 211',
+              quickRevisionNote: 'Chlorophyll = light trap.'
+            })
+          ],
+          medium: [
+            () => ({
+              type: 'mcq',
+              question: 'What is the primary function of chlorophyll inside chloroplasts during photosynthesis?',
+              options: [
+                'A) Absorbing light energy and converting it to chemical energy',
+                'B) Absorbing carbon dioxide from air directly',
+                'C) Storing glucose crystals',
+                'D) Transporting water to mesophyll cells'
+              ],
+              correctOption: 'A',
+              explanation: 'Chlorophyll acts as the photoreceptor that absorbs light wavelengths to excite electrons.',
+              chapterReference: 'Chapter 13, Page 211',
+              quickRevisionNote: 'Chlorophyll captures solar photons.'
+            }),
+            () => ({
+              type: 'mcq',
+              question: 'In which specific plant cell organelle is chlorophyll concentrated?',
+              options: ['A) Chloroplast', 'B) Mitochondria', 'C) Nucleus', 'D) Cell Wall'],
+              correctOption: 'A',
+              explanation: 'Chloroplasts are the double-membrane plastids where the photosynthetic reactions take place.',
+              chapterReference: 'Chapter 13, Page 211',
+              quickRevisionNote: 'Chloroplast = reaction site.'
+            })
+          ],
+          hard: [
+            () => {
+              const pigment = randomChoice(['chlorophyll a', 'chlorophyll b', 'carotenoids']);
+              return {
+                type: 'mcq',
+                question: `In an experiment, leaves are illuminated only with green light. What happens to the action spectrum rate of photosynthesis compared to using blue-red wavelengths, considering the absorption properties of ${pigment}?`,
+                options: [
+                  'A) The rate drops to near zero because green light is reflected rather than absorbed',
+                  'B) The rate increases exponentially',
+                  'C) The rate remains steady',
+                  'D) The leaves release nitrogen instead of oxygen'
+                ],
+                correctOption: 'A',
+                explanation: 'Chlorophyll pigments reflect green wavelengths, which is why plants appear green. Green light is not absorbed, causing photosynthesis to stop.',
+                chapterReference: 'Chapter 13, Page 212',
+                quickRevisionNote: 'Green light reflected = zero photosynthesis.'
+              };
+            },
+            () => ({
+              type: 'mcq',
+              question: 'Why do leaves of plants grown in iron-deficient soil exhibit chlorosis (yellowing) and a subsequent drop in photosynthetic output?',
+              options: [
+                'A) Iron is a crucial catalyst in chlorophyll biosynthesis',
+                'B) Iron molecules act as the primary light absorbents',
+                'C) Lack of iron blocks the stomatal gas pores directly',
+                'D) Iron is needed to transport glucose down to the roots'
+              ],
+              correctOption: 'A',
+              explanation: 'Iron is required for enzymes involved in chlorophyll synthesis, so deficiency stops pigment construction, causing yellowing.',
+              chapterReference: 'Chapter 13, Page 213',
+              quickRevisionNote: 'Iron deficiency limits chlorophyll.'
+            }),
+            () => ({
+              type: 'ar',
+              question: 'Assertion: Chlorophyll a is considered the primary photosynthetic pigment. Reason: It is the only pigment that can directly convert light energy into chemical energy in the reaction center.',
+              options: [
+                'A) Both A and R are true and R is the correct explanation of A',
+                'B) Both A and R are true but R is not the correct explanation of A',
+                'C) A is true but R is false',
+                'D) A is false but R is true'
+              ],
+              correctOption: 'A',
+              explanation: 'Accessory pigments like chlorophyll b and carotenoids absorb other light colors and pass the energy to chlorophyll a.',
+              chapterReference: 'Chapter 13, Page 211',
+              quickRevisionNote: 'Chlorophyll a = primary reaction center.'
+            })
+          ]
+        },
+        {
+          name: 'raw inputs',
+          easy: [
+            () => ({
+              type: 'fill',
+              question: 'The gas absorbed by plants from the atmosphere through stomata for photosynthesis is ___.',
+              options: [],
+              correctOption: 'Carbon Dioxide',
+              explanation: 'Stomata open to absorb CO2 for the light-independent reactions (Calvin cycle).',
+              chapterReference: 'Chapter 13, Page 210',
+              quickRevisionNote: 'Absorbed Gas = CO2.'
+            }),
+            () => ({
+              type: 'tf',
+              question: 'Water is absorbed by the roots of the plant and transported to the leaves.',
+              options: ['A) True', 'B) False'],
+              correctOption: 'A',
+              explanation: 'Roots draw water and minerals from the soil and send them to the leaves via xylem vessels.',
+              chapterReference: 'Chapter 13, Page 210',
+              quickRevisionNote: 'Roots absorb water.'
+            })
+          ],
+          medium: [
+            () => ({
+              type: 'ar',
+              question: 'Assertion: Desert plants open stomata at night to take in carbon dioxide. Reason: Opening stomata during the hot day would lead to excessive water loss.',
+              options: [
+                'A) Both A and R are true and R is the correct explanation of A',
+                'B) Both A and R are true but R is not the correct explanation of A',
+                'C) A is true but R is false',
+                'D) A is false but R is true'
+              ],
+              correctOption: 'A',
+              explanation: 'Desert plants (CAM plants) close stomata during day to conserve water and store CO2 at night.',
+              chapterReference: 'Chapter 13, Page 214',
+              quickRevisionNote: 'CAM plants = stomata open at night.'
+            }),
+            () => ({
+              type: 'mcq',
+              question: 'Which vascular tissue in plants is responsible for transporting water from roots to leaves for photosynthesis?',
+              options: ['A) Xylem', 'B) Phloem', 'C) Stomata', 'D) Epidermis'],
+              correctOption: 'A',
+              explanation: 'Xylem transports water and minerals, while Phloem distributes the synthesized sugars (food).',
+              chapterReference: 'Chapter 13, Page 210',
+              quickRevisionNote: 'Xylem = water; Phloem = food.'
+            })
+          ],
+          hard: [
+            () => ({
+              type: 'mcq',
+              question: 'If a plant is grown in an atmosphere rich in heavy oxygen isotope (O-18) in carbon dioxide, but normal water (H2O-16), what isotope will the released oxygen gas contain?',
+              options: [
+                'A) Normal oxygen (O-16) because released oxygen comes entirely from water splitting',
+                'B) Heavy oxygen (O-18) because released oxygen comes from carbon dioxide',
+                'C) A 50-50 mixture of both isotopes',
+                'D) No oxygen will be released at all'
+              ],
+              correctOption: 'A',
+              explanation: 'Photolysis of water at Photosystem II splits H2O molecules, which is the sole source of the oxygen gas released.',
+              chapterReference: 'Chapter 13, Page 213',
+              quickRevisionNote: 'Released O2 comes from water, not CO2.'
+            }),
+            () => ({
+              type: 'mcq',
+              question: 'Why does a water-stressed plant show a drastic reduction in carbon dioxide fixation rate even under bright sunlight?',
+              options: [
+                'A) Stomata close to prevent transpiration, which blocks CO2 from diffusing inside',
+                'B) Sunlight cannot be absorbed by dry plant cell walls',
+                'C) Water deficiency converts chlorophyll into carotene pigments',
+                'D) Starch molecules evaporate rapidly under dehydration'
+              ],
+              correctOption: 'A',
+              explanation: 'Stomatal closure is a protective mechanism that limits transpiration but cuts off CO2 raw material supply.',
+              chapterReference: 'Chapter 13, Page 212',
+              quickRevisionNote: 'Stress closes stomata, stopping CO2.'
+            }),
+            () => ({
+              type: 'ar',
+              question: 'Assertion: Carbon dioxide concentration is a major limiting factor for photosynthesis in C3 plants on hot sunny days. Reason: High temperature causes stomatal closure, limiting internal CO2 supply.',
+              options: [
+                'A) Both A and R are true and R is the correct explanation of A',
+                'B) Both A and R are true but R is not the correct explanation of A',
+                'C) A is true but R is false',
+                'D) A is false but R is true'
+              ],
+              correctOption: 'A',
+              explanation: 'With closed stomata, C3 plants consume internal CO2 down to compensation points, stalling photosynthesis.',
+              chapterReference: 'Chapter 13, Page 214',
+              quickRevisionNote: 'Limiting factor = internal CO2 supply.'
+            })
+          ]
+        },
+        {
+          name: 'stomata and gas exchange',
+          easy: [
+            () => ({
+              type: 'fill',
+              question: 'The tiny pores on the surface of leaves through which gas exchange occurs are called ___.',
+              options: [],
+              correctOption: 'Stomata',
+              explanation: 'Stomata allow the diffusion of CO2 and water vapor, guarded by guard cells.',
+              chapterReference: 'Chapter 13, Page 212',
+              quickRevisionNote: 'Pores = Stomata.'
+            }),
+            () => ({
+              type: 'tf',
+              question: 'Stomata are found in much larger quantities on the upper surface of land leaves compared to the lower surface.',
+              options: ['A) True', 'B) False'],
+              correctOption: 'B',
+              explanation: 'To reduce water loss from direct sunlight, land plants have more stomata on the cooler lower epidermis.',
+              chapterReference: 'Chapter 13, Page 212',
+              quickRevisionNote: 'Stomata concentration = higher below.'
+            })
+          ],
+          medium: [
+            () => ({
+              type: 'mcq',
+              question: 'Which specific leaf cells regulate the opening and closing of stomatal pores?',
+              options: ['A) Guard cells', 'B) Mesophyll cells', 'C) Xylem vessels', 'D) Epidermal skin cells'],
+              correctOption: 'A',
+              explanation: 'Guard cells change shape when turgid, opening or closing the pore.',
+              chapterReference: 'Chapter 13, Page 212',
+              quickRevisionNote: 'Regulation = Guard cells.'
+            }),
+            () => ({
+              type: 'fill',
+              question: 'When guard cells lose water, they become flaccid and the stomatal pore ___.',
+              options: [],
+              correctOption: 'closes',
+              explanation: 'Loss of turgor pressure causes guard cells to straighten and close the pore.',
+              chapterReference: 'Chapter 13, Page 212',
+              quickRevisionNote: 'Flaccid = close.'
+            })
+          ],
+          hard: [
+            () => ({
+              type: 'ar',
+              question: 'Assertion: Guard cells swell up to open the stomatal aperture. Reason: Active transport of potassium ions (K+) into guard cells triggers water inflow, making them turgid.',
+              options: [
+                'A) Both A and R are true and R is the correct explanation of A',
+                'B) Both A and R are true but R is not the correct explanation of A',
+                'C) A is true but R is false',
+                'D) A is false but R is true'
+              ],
+              correctOption: 'A',
+              explanation: 'K+ accumulation draws water in by osmosis, curving the guard cells to open the stomata.',
+              chapterReference: 'Chapter 13, Page 212',
+              quickRevisionNote: 'K+ transport triggers opening.'
+            }),
+            () => ({
+              type: 'mcq',
+              question: 'How does the structural thickness of the inner wall of guard cells compared to their outer wall facilitate stomatal opening?',
+              options: [
+                'A) The thick inner wall is less elastic, causing the cells to curve outward when turgid',
+                'B) The thick inner wall allows light to filter into chloroplasts',
+                'C) The thin outer wall prevents any water from escaping the cell',
+                'D) The thick inner wall chemical attracts CO2 gas molecules'
+              ],
+              correctOption: 'A',
+              explanation: 'Because the outer wall is thin and elastic, it stretches more than the thick inner wall, forcing the guard cell to bow outward when turgid.',
+              chapterReference: 'Chapter 13, Page 212',
+              quickRevisionNote: 'Asymmetrical walls cause bowing.'
+            }),
+            () => ({
+              type: 'mcq',
+              question: 'In which environmental condition will a plant exhibit maximum stomatal resistance to gas exchange?',
+              options: [
+                'A) Low soil water availability combined with high wind speed',
+                'B) High humidity combined with direct morning sunlight',
+                'C) High soil moisture combined with cool shade',
+                'D) Flooded fields in complete darkness'
+              ],
+              correctOption: 'A',
+              explanation: 'Dry soil combined with wind stress triggers abscisic acid synthesis, closing stomata fully to prevent lethal wilting.',
+              chapterReference: 'Chapter 13, Page 213',
+              quickRevisionNote: 'Wind + Dry = high stomatal resistance.'
+            })
+          ]
+        },
+        {
+          name: 'dark reaction',
+          easy: [
+            () => ({
+              type: 'tf',
+              question: 'The light-independent (dark) reaction of photosynthesis can ONLY take place in complete darkness.',
+              options: ['A) True', 'B) False'],
+              correctOption: 'B',
+              explanation: 'It is called dark reaction because it does not directly use light, but it can and does occur in daylight.',
+              chapterReference: 'Chapter 13, Page 214',
+              quickRevisionNote: 'Dark reaction = independent of light.'
+            }),
+            () => ({
+              type: 'fill',
+              question: 'The sugar produced as the immediate primary product of carbon fixation is ___.',
+              options: [],
+              correctOption: 'glucose',
+              explanation: 'Photosynthesis fixes CO2 to produce glucose, which is stored as starch.',
+              chapterReference: 'Chapter 13, Page 214',
+              quickRevisionNote: 'Fixed sugar = glucose.'
+            })
+          ],
+          medium: [
+            () => ({
+              type: 'mcq',
+              question: 'In which part of the chloroplast does the light-independent Calvin cycle reaction take place?',
+              options: ['A) Stroma of the chloroplast', 'B) Thylakoid membrane grana', 'C) Outer envelope membrane', 'D) Inside the thylakoid lumen'],
+              correctOption: 'A',
+              explanation: 'The stroma contains the enzymes (like RuBisCO) necessary to fix CO2 into sugars.',
+              chapterReference: 'Chapter 13, Page 214',
+              quickRevisionNote: 'Calvin Cycle location = Stroma.'
+            }),
+            () => ({
+              type: 'mcq',
+              question: 'Which specific enzyme fixes atmospheric carbon dioxide into a 3-carbon sugar in C3 plants during the dark reaction?',
+              options: ['A) RuBisCO', 'B) Amylase', 'C) Pepsin', 'D) ATP Synthase'],
+              correctOption: 'A',
+              explanation: 'RuBisCO is the most abundant enzyme on Earth, catalyzing the carbon fixation reaction.',
+              chapterReference: 'Chapter 13, Page 215',
+              quickRevisionNote: 'Fixing enzyme = RuBisCO.'
+            })
+          ],
+          hard: [
+            () => ({
+              type: 'mcq',
+              question: 'Why does the dark reaction of photosynthesis stop within a few minutes of turning off the light source?',
+              options: [
+                'A) It relies on short-lived ATP and NADPH produced during the light reaction',
+                'B) The RuBisCO enzyme decomposes in the dark',
+                'C) Starch molecules block the stroma in the dark',
+                'D) Water splitting stops, leading to oxygen toxic build-up'
+              ],
+              correctOption: 'A',
+              explanation: 'The light-independent phase requires ATP and NADPH from the light-dependent phase, which decay or run out quickly in the dark.',
+              chapterReference: 'Chapter 13, Page 215',
+              quickRevisionNote: 'Dark reaction depends on light phase products.'
+            }),
+            () => ({
+              type: 'ar',
+              question: 'Assertion: C4 plants are photosynthetically more efficient than C3 plants in hot, dry environments. Reason: C4 plants use PEP carboxylase to fix carbon, which has no oxygenase activity and avoids photorespiration.',
+              options: [
+                'A) Both A and R are true and R is the correct explanation of A',
+                'B) Both A and R are true but R is not the correct explanation of A',
+                'C) A is true but R is false',
+                'D) A is false but R is true'
+              ],
+              correctOption: 'A',
+              explanation: 'PEP carboxylase has high affinity for CO2, allowing C4 plants to run photosynthesis efficiently even with partially closed stomata.',
+              chapterReference: 'Chapter 13, Page 216',
+              quickRevisionNote: 'C4 path avoids photorespiration.'
+            }),
+            () => ({
+              type: 'mcq',
+              question: 'In C4 plants, where does the initial carbon fixation occur, and where is the Calvin Cycle executed?',
+              options: [
+                'A) Fixation in mesophyll cells, Calvin Cycle in bundle sheath cells',
+                'B) Fixation in bundle sheath cells, Calvin Cycle in stomatal guard cells',
+                'C) Both occur inside the grana thylakoid membranes',
+                'D) Fixation in roots, Calvin Cycle in leaf epidermal cells'
+              ],
+              correctOption: 'A',
+              explanation: 'Spatial separation between mesophyll (carbon fixation) and bundle sheath cells (sugar synthesis) optimizes efficiency in C4 plants.',
+              chapterReference: 'Chapter 13, Page 216',
+              quickRevisionNote: 'C4 separation: mesophyll vs bundle sheath.'
+            })
+          ]
+        }
+      ];
+
+      const difficultiesOrder = [difficultyLevel, ...['easy', 'medium', 'hard'].filter(d => d !== difficultyLevel)];
+      for (const diffVal of difficultiesOrder) {
+        for (const sub of subtopics) {
+          const creators = sub[diffVal];
+          if (Array.isArray(creators)) {
+            creators.forEach(c => questionsList.push(c()));
+          } else if (typeof creators === 'function') {
+            questionsList.push(creators());
+          }
+        }
+      }
+    }
+
+    else {
+      const subtopics = [
+        {
+          name: 'core concepts',
+          easy: [
+            () => ({
+              type: 'tf',
+              question: `According to NCERT Class ${cl} ${s}, the concept of "${topic}" is an essential part of the syllabus.`,
+              options: ['A) True', 'B) False'],
+              correctOption: 'A',
+              explanation: `The NCERT Class ${cl} curriculum structures "${topic}" as a core conceptual framework.`,
+              chapterReference: `Class ${cl} Syllabus`,
+              quickRevisionNote: `Focus topic: ${topic}.`
+            }),
+            () => ({
+              type: 'fill',
+              question: `The concept of ___ is a foundational pillar of Class ${cl} ${s} study.`,
+              options: [],
+              correctOption: topic,
+              explanation: `Studying ${topic} is key to understanding this chapter of Class ${cl} ${s}.`,
+              chapterReference: `Class ${cl} Chapter Reference`,
+              quickRevisionNote: `Topic keyword: ${topic}.`
+            }),
+            () => ({
+              type: 'mcq',
+              question: `Which of the following is the most direct representation of "${topic}" in Class ${cl} ${s}?`,
+              options: [
+                `A) A primary study topic within the core NCERT chapters`,
+                `B) An optional extra-curricular reading module`,
+                `C) A concept that has been deleted from modern textbooks`,
+                `D) A topic only taught to postgraduate researchers`
+              ],
+              correctOption: 'A',
+              explanation: `NCERT textbooks include "${topic}" to build basic scientific and logical knowledge at the secondary level.`,
+              chapterReference: `Class ${cl} Syllabus`,
+              quickRevisionNote: `${topic} is a core syllabus component.`
+            }),
+            () => ({
+              type: 'tf',
+              question: `Learning about "${topic}" is designed to help Class ${cl} students build their fundamental knowledge in ${s}.`,
+              options: ['A) True', 'B) False'],
+              correctOption: 'A',
+              explanation: `The chapters are structured to transition students from basic ideas to deeper concepts.`,
+              chapterReference: `Class ${cl} Guidelines`,
+              quickRevisionNote: `Foundation building via ${topic}.`
+            }),
+            () => ({
+              type: 'fill',
+              question: `To excel in school examinations, a Class ${cl} student must grasp the core principles of ___ first.`,
+              options: [],
+              correctOption: topic,
+              explanation: `Understanding the definition and properties of ${topic} is fundamental to scoring well.`,
+              chapterReference: `Exam Prep Section`,
+              quickRevisionNote: `Key concept: ${topic}.`
+            }),
+            () => ({
+              type: 'mcq',
+              question: `What is a basic characteristic of "${topic}" as introduced in Class ${cl} standard textbooks?`,
+              options: [
+                `A) It has structured properties that are tested in board exams`,
+                `B) It is a purely fictional concept for illustration`,
+                `C) It is only applicable to non-Indian syllabus systems`,
+                `D) It can be completely understood without any reading`
+              ],
+              correctOption: 'A',
+              explanation: `NCERT ensures topics are fact-based and aligned with standard curriculum benchmarks.`,
+              chapterReference: `NCERT Text Book`,
+              quickRevisionNote: `Fact-based learning.`
+            }),
+            () => ({
+              type: 'tf',
+              question: `Is it true that "${topic}" is completely unrelated to any practical experiments described in the Class ${cl} manual?`,
+              options: ['A) True', 'B) False'],
+              correctOption: 'B',
+              explanation: `Practical exercises and activities are usually detailed to demonstrate the effects of ${topic}.`,
+              chapterReference: `Practical Guide`,
+              quickRevisionNote: `Activity links are present.`
+            })
+          ],
+          medium: [
+            () => ({
+              type: 'mcq',
+              question: `What represents the main academic significance of studying "${topic}" in Class ${cl} ${s}?`,
+              options: [
+                `A) It explains the core theoretical principles of the chapter`,
+                `B) It has no relevance to Class ${cl} examinations`,
+                `C) It is a purely historical detail with no science application`,
+                `D) It is optional and can be skipped entirely`
+              ],
+              correctOption: 'A',
+              explanation: `Studying "${topic}" provides the foundational background needed for understanding this chapter.`,
+              chapterReference: `NCERT Class ${cl}`,
+              quickRevisionNote: `Understand the basics of ${topic}.`
+            }),
+            () => ({
+              type: 'mcq',
+              question: `How does understanding "${topic}" assist a student in solving application-based problems in ${s}?`,
+              options: [
+                `A) It links simple observation with scientific definitions`,
+                `B) It encourages copying answers from reference books`,
+                `C) It eliminates the need for logical analytical thinking`,
+                `D) It only helps in memorizing dates and scientist names`
+              ],
+              correctOption: 'A',
+              explanation: `Application questions test how well you can connect the principles of ${topic} to real world scenarios.`,
+              chapterReference: `Class ${cl} Chapter Review`,
+              quickRevisionNote: `Application = Connecting theory to practice.`
+            }),
+            () => ({
+              type: 'tf',
+              question: `In Class ${cl} curriculum, "${topic}" is linked with standard scientific experiments to improve reasoning.`,
+              options: ['A) True', 'B) False'],
+              correctOption: 'A',
+              explanation: `NCERT uses interactive activities to help students visualize the concepts of ${topic}.`,
+              chapterReference: `NCERT Activity Log`,
+              quickRevisionNote: `Visualize concepts through experiments.`
+            }),
+            () => ({
+              type: 'fill',
+              question: `When analyzing typical properties of ${topic}, we must observe how it interacts with other ___ parameters.`,
+              options: [],
+              correctOption: `environmental`,
+              explanation: `Scientific variables are always studied in relation to environmental or surrounding conditions.`,
+              chapterReference: `Lab Manual Class ${cl}`,
+              quickRevisionNote: `Variables interact with environments.`
+            }),
+            () => ({
+              type: 'mcq',
+              question: `Which scientific method is most recommended for investigating the properties of "${topic}" at school level?`,
+              options: [
+                `A) Controlled classroom observation and structured worksheets`,
+                `B) Guesswork and assuming answers based on personal opinion`,
+                `C) Ignoring textbook guidelines and reading random web pages`,
+                `D) Skipping all textbook activities and directly reading the answer key`
+              ],
+              correctOption: 'A',
+              explanation: `Systematic observation is the cornerstone of secondary school science education.`,
+              chapterReference: `NCERT Pedagogy`,
+              quickRevisionNote: `Observation is key.`
+            }),
+            () => ({
+              type: 'tf',
+              question: `Mastering "${topic}" allows a student to easily comprehend advanced related chapters in higher secondary classes.`,
+              options: ['A) True', 'B) False'],
+              correctOption: 'A',
+              explanation: `Class ${cl} serves as a gateway; the concepts of ${topic} are expanded in Class 9 and 10.`,
+              chapterReference: `Curriculum Map`,
+              quickRevisionNote: `Build path for future learning.`
+            }),
+            () => ({
+              type: 'fill',
+              question: `A key educational goal of NCERT regarding ${topic} is to enable students to identify it in ___ scenarios.`,
+              options: [],
+              correctOption: `real-life`,
+              explanation: `Practical context helps link abstract definitions to real-life occurrences.`,
+              chapterReference: `Class ${cl} Objective`,
+              quickRevisionNote: `Context = real-world.`
+            })
+          ],
+          hard: [
+            () => ({
+              type: 'ar',
+              question: `Assertion: Mastery of "${topic}" is crucial for high performance in NCERT assessments. Reason: "${topic}" tests Higher Order Thinking Skills (HOTS) across multiple chapters.`,
+              options: [
+                'A) Both A and R are true and R is the correct explanation of A',
+                'B) Both A and R are true but R is not the correct explanation of A',
+                'C) A is true but R is false',
+                'D) A is false but R is true'
+              ],
+              correctOption: 'A',
+              explanation: `Higher-level questions in Class ${cl} require synthesis of multiple concepts, making this topic crucial.`,
+              chapterReference: `Class ${cl} Framework`,
+              quickRevisionNote: `Master core principles for exam success.`
+            }),
+            () => ({
+              type: 'ar',
+              question: `Assertion: A student cannot fully explain "${topic}" by simply memorizing its dictionary definition. Reason: NCERT examinations evaluate conceptual understanding and scenario-based application of "${topic}".`,
+              options: [
+                'A) Both A and R are true and R is the correct explanation of A',
+                'B) Both A and R are true but R is not the correct explanation of A',
+                'C) A is true but R is false',
+                'D) A is false but R is true'
+              ],
+              correctOption: 'A',
+              explanation: `Rote learning is discouraged; the exams prioritize checking if a student can apply the theory of ${topic}.`,
+              chapterReference: `NCERT Exam Scheme`,
+              quickRevisionNote: `Application > Rote memorization.`
+            }),
+            () => ({
+              type: 'mcq',
+              question: `In a complex question about "${topic}", what strategy is most effective for a student to construct a scientifically correct answer?`,
+              options: [
+                `A) Identify the underlying physical laws and draft a response with clear cause-and-effect links`,
+                `B) Write down all unrelated terms from the textbook index to fill the page`,
+                `C) State that the question is out-of-syllabus and should not be graded`,
+                `D) Write a brief paragraph about general science without mentioning the core topic`
+              ],
+              correctOption: 'A',
+              explanation: `Scientific explanations require linking observations with correct terminology and logical reasoning.`,
+              chapterReference: `HOTS Guidelines`,
+              quickRevisionNote: `Structure = Cause + Effect.`
+            }),
+            () => ({
+              type: 'ar',
+              question: `Assertion: Active participation in laboratory experiments related to "${topic}" improves exam results. Reason: Experiential learning reinforces cognitive memory and builds spatial intuition.`,
+              options: [
+                'A) Both A and R are true and R is the correct explanation of A',
+                'B) Both A and R are true but R is not the correct explanation of A',
+                'C) A is true but R is false',
+                'D) A is false but R is true'
+              ],
+              correctOption: 'A',
+              explanation: `Doing experiments helps students understand the scientific principles of ${topic} much better than just reading.`,
+              chapterReference: `CBSE Circular`,
+              quickRevisionNote: `Experiential learning is powerful.`
+            }),
+            () => ({
+              type: 'mcq',
+              question: `When evaluating a scientific hypothesis concerning "${topic}" in a Class ${cl} test, what must the student evaluate first?`,
+              options: [
+                `A) The experimental variables and the accuracy of the observed results`,
+                `B) The names of the students who designed the layout`,
+                `C) The type of font used in the printed textbook page`,
+                `D) The cost of the laboratory equipment used`
+              ],
+              correctOption: 'A',
+              explanation: `A hypothesis is tested by checking variable relationships and matching them with observed data.`,
+              chapterReference: `Scientific Method`,
+              quickRevisionNote: `Check variables and observations.`
+            }),
+            () => ({
+              type: 'ar',
+              question: `Assertion: The concept of "${topic}" is tested using multi-step questions in standard exams. Reason: Multi-step questions help differentiate between superficial reading and deep analytical mastery.`,
+              options: [
+                'A) Both A and R are true and R is the correct explanation of A',
+                'B) Both A and R are true but R is not the correct explanation of A',
+                'C) A is true but R is false',
+                'D) A is false but R is true'
+              ],
+              correctOption: 'A',
+              explanation: `Multiple steps require students to retrieve and apply multiple related facts in sequence.`,
+              chapterReference: `CBSE HOTS Guide`,
+              quickRevisionNote: `Multi-step = deeper check.`
+            })
+          ]
+        }
+      ];
+
+      const difficultiesOrder = [difficultyLevel, ...['easy', 'medium', 'hard'].filter(d => d !== difficultyLevel)];
+      for (const diffVal of difficultiesOrder) {
+        for (const sub of subtopics) {
+          const creators = sub[diffVal];
+          if (Array.isArray(creators)) {
+            creators.forEach(c => questionsList.push(c()));
+          } else if (typeof creators === 'function') {
+            questionsList.push(creators());
+          }
+        }
+      }
+    }
+
+    return questionsList;
   };
 
-  // Use language-specific fallback if available, else English
-  const fallbackFn = fallbackTemplates[lang] || fallbackTemplates['en'];
-  const fallbackQuestions = fallbackFn(actualTopic, actualSubject, cl);
+  const translateText = async (text, targetCode) => {
+    try {
+      const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|${targetCode}&de=vidyaai@education.in`;
+      const r = await fetch(url, { signal: AbortSignal.timeout(3000) });
+      const d = await r.json();
+      if (d.responseStatus === 200 && d.responseData?.translatedText) {
+        return d.responseData.translatedText;
+      }
+      return text;
+    } catch {
+      return text;
+    }
+  };
+
+  // Processing is already performed directly in the batch loop.
+
+  // If we don't have enough unique questions, fill from dynamic offline generator
+  if (preparedQuestions.length < nq) {
+    console.log(`[UniqueQuiz Engine] Filling remaining slots. Prepared: ${preparedQuestions.length}/${nq}. Rejections: ${rejectedCount}. Fallback activated...`);
+    const needed = nq - preparedQuestions.length;
+    const englishFallback = buildDynamicFallbackQs(actualTopic, actualSubject, cl, diff);
+    
+    // Shuffle the fallback bank to ensure randomized selection order
+    const shuffledFallback = [...englishFallback].sort(() => 0.5 - Math.random());
+    
+    let fallbackAttempts = 0;
+    
+    while (preparedQuestions.length < nq && fallbackAttempts < 40) {
+      fallbackAttempts++;
+      const baseQ = shuffledFallback[fallbackAttempts % shuffledFallback.length];
+      if (!baseQ) continue;
+      
+      let isDuplicate = false;
+      const currentSessionHistory = previousQuestions || [];
+      
+      // Check already prepared in this session
+      for (const prepQ of preparedQuestions) {
+        if (calculateJaccardSimilarity(baseQ.question, prepQ.question) > 0.35) {
+          isDuplicate = true;
+          break;
+        }
+      }
+      
+      // Check session history
+      if (!isDuplicate) {
+        for (const pastQ of currentSessionHistory) {
+          if (calculateJaccardSimilarity(baseQ.question, pastQ) > 0.35) {
+            isDuplicate = true;
+            break;
+          }
+        }
+      }
+      // Check global
+      if (!isDuplicate) {
+        for (const entry of globalQuestionHistory) {
+          if (calculateJaccardSimilarity(baseQ.question, entry.question) > 0.35) {
+            isDuplicate = true;
+            break;
+          }
+        }
+      }
+      
+      if (!isDuplicate) {
+        let processedQ = { ...baseQ, questionNumber: preparedQuestions.length + 1 };
+        if (processedQ.type === 'mcq' || processedQ.type === 'ar') {
+          const sh = shuffleOptions(processedQ.options, processedQ.correctOption);
+          processedQ.options = sh.options;
+          processedQ.correctOption = sh.correctOption;
+        }
+        preparedQuestions.push(processedQ);
+        globalQuestionHistory.push({
+          question: processedQ.question,
+          topic: actualTopic,
+          difficulty: diff,
+          timestamp: Date.now()
+        });
+      } else {
+        rejectedCount++;
+      }
+    }
+    
+    // Safety valve: if still not enough unique ones, force-add from fallback ignoring similarity
+    if (preparedQuestions.length < nq) {
+      for (const baseQ of shuffledFallback) {
+        if (preparedQuestions.length >= nq) break;
+        // Avoid duplicate reference within the same quiz array
+        if (preparedQuestions.some(item => item.question === baseQ.question)) continue;
+        
+        let processedQ = { ...baseQ, questionNumber: preparedQuestions.length + 1 };
+        if (processedQ.type === 'mcq' || processedQ.type === 'ar') {
+          const sh = shuffleOptions(processedQ.options, processedQ.correctOption);
+          processedQ.options = sh.options;
+          processedQ.correctOption = sh.correctOption;
+        }
+        preparedQuestions.push(processedQ);
+      }
+    }
+  }
+
+  // Cap global history at 200 items to prevent unbounded memory growth
+  if (globalQuestionHistory.length > 200) {
+    globalQuestionHistory.splice(0, globalQuestionHistory.length - 200);
+  }
+
+  // Translate preparedQuestions to target language if not English
+  if (lang !== 'en' && MY_MEMORY_MAP[lang]) {
+    const targetCode = MY_MEMORY_MAP[lang];
+    try {
+      console.log(`[UniqueQuiz Engine] Translating final ${preparedQuestions.length} unique questions to ${langName}...`);
+      const translatedQuestions = [];
+      for (const q of preparedQuestions) {
+        try {
+          const tQuestion = await translateText(q.question, targetCode);
+          
+          const tOptions = [];
+          for (const opt of q.options) {
+            const letter = opt.slice(0, 3); // 'A) '
+            const optText = opt.slice(3);
+            const tOptText = await translateText(optText, targetCode);
+            tOptions.push(`${letter}${tOptText}`);
+          }
+
+          const tExplanation = await translateText(q.explanation, targetCode);
+          const tChapterRef = q.chapterReference ? await translateText(q.chapterReference, targetCode) : undefined;
+          const tRevNote = q.quickRevisionNote ? await translateText(q.quickRevisionNote, targetCode) : undefined;
+
+          let tCorrectOption = q.correctOption;
+          if (q.type === 'fill') {
+            tCorrectOption = await translateText(q.correctOption, targetCode);
+          }
+
+          translatedQuestions.push({
+            ...q,
+            question: tQuestion,
+            options: tOptions,
+            correctOption: tCorrectOption,
+            explanation: tExplanation,
+            chapterReference: tChapterRef,
+            quickRevisionNote: tRevNote
+          });
+        } catch (err) {
+          console.error(`[UniqueQuiz Engine] Translation error for question ${q.questionNumber}:`, err.message);
+          translatedQuestions.push(q);
+        }
+        await new Promise(r => setTimeout(r, 60)); // minor gap
+      }
+      
+      const finalQuestions = translatedQuestions.map((qItem, idx) => ({ ...qItem, questionNumber: idx + 1 }));
+      
+      return res.json({
+        success: true,
+        provider: lastLlmProvider ? `${lastLlmProvider}_translated` : 'local_fallback_translated',
+        topic: actualTopic,
+        rejections: rejectedCount,
+        questions: finalQuestions
+      });
+    } catch (e) {
+      console.error('[UniqueQuiz Engine] Fallback translation failed:', e.message);
+    }
+  }
+
+  // Renumber questions consecutively
+  const finalQuestions = preparedQuestions.map((qItem, idx) => ({ ...qItem, questionNumber: idx + 1 }));
 
   res.json({
     success: true,
-    provider: 'local_offline',
-    questions: fallbackQuestions
+    provider: lastLlmProvider || 'local_fallback',
+    topic: actualTopic,
+    rejections: rejectedCount,
+    questions: finalQuestions
   });
 });
 

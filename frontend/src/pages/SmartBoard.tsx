@@ -5,7 +5,8 @@ import { CURRICULUM_FALLBACK } from '../store/curriculumFallback';
 import {
   Presentation, Mic, Send, RefreshCw,
   Layers, Sliders, ChevronDown,
-  Volume2, VolumeX, Zap, Play, RotateCcw, Info
+  Volume2, VolumeX, Zap, Play, RotateCcw, Info,
+  BookOpen
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
