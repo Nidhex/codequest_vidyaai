@@ -63,7 +63,7 @@ export const StudentDashboard: React.FC = () => {
         <div className="text-left font-mono">
           <span className="text-[10px] text-cyber-blue font-bold tracking-widest uppercase">Student Operations Center</span>
           <h1 className="font-outfit font-black text-2xl text-white mt-1">
-            {t.welcomeBack}
+            {t.welcomeBack.replace('{name}', user.name?.split(' ')[0] || 'Scholar')}
           </h1>
         </div>
         <div className="text-right text-[10px] font-mono text-cyber-text/50 uppercase mt-2 sm:mt-0">

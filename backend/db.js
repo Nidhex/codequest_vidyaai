@@ -362,11 +362,11 @@ module.exports = {
         completedLessons: [],
         streakLogs: [0, 0, 0, 0, 0],
         subjectProgress: {
-          Science: 10,
-          Mathematics: 10,
-          "Social Science": 10,
-          English: 10,
-          Hindi: 10
+          Science: 0,
+          Mathematics: 0,
+          "Social Science": 0,
+          English: 0,
+          Hindi: 0
         }
       };
     }

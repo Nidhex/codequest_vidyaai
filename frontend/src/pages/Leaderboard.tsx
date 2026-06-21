@@ -6,7 +6,7 @@ export const Leaderboard: React.FC = () => {
   const { user } = useMainStore();
 
   const mockLeaderboard = [
-    { rank: 1, name: user?.name || "Aarav Sharma", xp: user?.xp || 1250, level: user?.level || 4, active: true },
+    { rank: 1, name: user?.name || "You", xp: user?.xp || 0, level: user?.level || 1, active: true },
     { rank: 2, name: "Divya Sen", xp: 1120, level: 3, active: false },
     { rank: 3, name: "Rahul Gupta", xp: 950, level: 3, active: false },
     { rank: 4, name: "Priya Das", xp: 890, level: 3, active: false },

@@ -1224,7 +1224,7 @@ const DebateArenaContent: React.FC<DebateArenaProps> = ({ onNavigate }) => {
                   <span className={`text-[8.5px] font-bold uppercase tracking-wider ${
                     arg.speaker === 'student' ? 'text-cyber-cyan' : 'text-cyber-purple'
                   }`}>
-                    {arg.speaker === 'student' ? `${user?.name || 'Aarav'} (Student)` : `AI Opponent (${personalityMode})`}
+                    {arg.speaker === 'student' ? `${user?.name?.split(' ')[0] || 'You'} (Student)` : `AI Opponent (${personalityMode})`}
                   </span>
                   <p className="text-cyber-text/95 mt-0.5 leading-relaxed text-[11.5px]">{arg.text}</p>
                 </div>
@@ -1573,7 +1573,7 @@ const DebateArenaContent: React.FC<DebateArenaProps> = ({ onNavigate }) => {
                 🏆 Class 8 Leaderboard Rankings (Mock Peer Comparison)
               </span>
               <div className="grid grid-cols-4 gap-2 text-[10px] font-mono border-t border-cyber-border/10 pt-2 text-cyber-text/50">
-                <div className="text-cyber-cyan font-bold">RANK 1: Aarav Sharma (You) • 1350 XP</div>
+                <div className="text-cyber-cyan font-bold">RANK 1: {user?.name || 'You'} • {user?.xp || 0} XP</div>
                 <div>RANK 2: Rohan Verma • 1200 XP</div>
                 <div>RANK 3: Priyanjali Sen • 1150 XP</div>
                 <div>RANK 4: Sneha Patel • 980 XP</div>

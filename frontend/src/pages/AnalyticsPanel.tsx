@@ -156,11 +156,7 @@ export const AnalyticsPanel: React.FC<AnalyticsPanelProps> = ({ onNavigate }) =>
   const rawHistory = quizStats.recentQuizHistory || [];
   const trendHistory = rawHistory.length > 0 
     ? [...rawHistory].reverse()
-    : [
-        { id: '1', score: 60, date: '15 Jun', topic: 'Seed Log 1' },
-        { id: '2', score: 75, date: '17 Jun', topic: 'Seed Log 2' },
-        { id: '3', score: 85, date: '19 Jun', topic: 'Seed Log 3' }
-      ];
+    : [];
 
   const trendPoints = trendHistory.map((item, i) => {
     const x = paddingX + (i / Math.max(1, trendHistory.length - 1)) * chartWidth;

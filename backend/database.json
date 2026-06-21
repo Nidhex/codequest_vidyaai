@@ -86,6 +86,34 @@
         "English": 10,
         "Hindi": 10
       }
+    },
+    {
+      "id": "user-4xt4hf1x6",
+      "role": "student",
+      "name": "nidhish vaishnav",
+      "email": "nidsvaishnav10@gmail.com",
+      "passwordHash": "$2b$10$AJqh7zoK9SePHFJKXiPc/eJaOjGWGrTU/Zv1V1hDNqYeTww81cJ96",
+      "class": "12",
+      "preferredLanguage": "en",
+      "xp": 142,
+      "level": 1,
+      "streak": 1,
+      "badges": [],
+      "completedLessons": [],
+      "streakLogs": [
+        0,
+        0,
+        0,
+        0,
+        1
+      ],
+      "subjectProgress": {
+        "Science": 49,
+        "Mathematics": 49,
+        "Social Science": 49,
+        "English": 49,
+        "Hindi": 49
+      }
     }
   ],
   "lessons": [],
@@ -252,6 +280,42 @@
       "totalQuestions": 10,
       "correctAnswers": 10,
       "wrongAnswers": 0
+    },
+    {
+      "id": "log-t18hddadh",
+      "timestamp": "2026-06-21T12:19:02.846Z",
+      "userId": "user-4xt4hf1x6",
+      "activityType": "feynman",
+      "subject": "Physics",
+      "chapter": "Chapter 1: Physical world measurement scales",
+      "topic": "Core Theory",
+      "timeSpent": 2,
+      "score": 32
+    },
+    {
+      "id": "log-xlvxotqlo",
+      "timestamp": "2026-06-21T12:19:26.744Z",
+      "userId": "user-4xt4hf1x6",
+      "activityType": "feynman",
+      "subject": "Physics",
+      "chapter": "Chapter 1: Physical world measurement scales",
+      "topic": "Core Theory",
+      "timeSpent": 1,
+      "score": 32
+    },
+    {
+      "id": "log-jvf827ds4",
+      "timestamp": "2026-06-21T12:20:15.074Z",
+      "userId": "user-4xt4hf1x6",
+      "activityType": "quiz",
+      "subject": "Physics",
+      "chapter": "Chapter 1: Physical world measurement scales",
+      "topic": "Core Theory",
+      "timeSpent": 1,
+      "score": 38,
+      "totalQuestions": 8,
+      "correctAnswers": 3,
+      "wrongAnswers": 5
     }
   ]
 }

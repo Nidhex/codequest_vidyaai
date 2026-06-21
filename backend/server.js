@@ -4880,7 +4880,7 @@ app.get('/api/learning/activity/stats', authenticateToken, (req, res) => {
     // A. Study Overview
     const totalStudyTime = logs.reduce((acc, l) => acc + (l.timeSpent || 0), 0);
     const lessonsCompletedCount = logs.filter(l => l.activityType === 'lesson').length;
-    const weeklyStreak = user.streak || 1;
+    const weeklyStreak = user.streak || 0;
     const totalXP = user.xp;
     const level = user.level;
 
