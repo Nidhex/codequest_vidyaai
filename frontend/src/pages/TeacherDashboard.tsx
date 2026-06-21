@@ -8,7 +8,8 @@ import {
   Printer, Share2, Save, Calendar, Send, Sparkles, 
   Check, Trash, Eye, BookOpenCheck, Layout, ListChecks, 
   MessageSquareCode, Clock, Info, CheckCircle2, Circle,
-  Search
+  Search, Flame, Award, Zap, TrendingUp, X, ChevronRight,
+  Activity, UserPlus, Mail, GraduationCap
 } from 'lucide-react';
 
 interface TeacherDashboardProps {
@@ -25,7 +26,7 @@ interface ScheduledLesson {
 }
 
 export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onNavigate }) => {
-  const { language } = useMainStore();
+  const { language, token, user } = useMainStore();
   const t = TRANSLATIONS[language] || TRANSLATIONS.en;
 
   // 1. Selector States
@@ -42,12 +43,112 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onNavigate }
   const [isSearchingChapters, setIsSearchingChapters] = useState(false);
   const isProgrammaticRef = React.useRef(false);
 
+  // 1.6 Classroom Telemetry States
+  const [telemetryLoading, setTelemetryLoading] = useState(false);
+  const [assignedStudents, setAssignedStudents] = useState<any[]>([]);
+  const [searchableStudents, setSearchableStudents] = useState<any[]>([]);
+  const [studentSearchQuery, setStudentSearchQuery] = useState('');
+  const [classroomAnalytics, setClassroomAnalytics] = useState<any>({
+    totalStudents: 0,
+    avgStreak: 0,
+    avgQuizScore: 0,
+    activeTodayCount: 0,
+    subjectAverages: { Science: 0, Mathematics: 0, "Social Science": 0, English: 0, Hindi: 0 },
+    insights: []
+  });
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+  const [selectedStudentStats, setSelectedStudentStats] = useState<any | null>(null);
+  const [studentDetailsLoading, setStudentDetailsLoading] = useState(false);
+  const [assignModalOpen, setAssignModalOpen] = useState(false);
+  const [assignSearchQuery, setAssignSearchQuery] = useState('');
+  const [assigningId, setAssigningId] = useState<string | null>(null);
+
+  const fetchTelemetry = async () => {
+    if (!token) return;
+    setTelemetryLoading(true);
+    try {
+      const [studentsRes, analyticsRes, searchRes] = await Promise.all([
+        fetch('http://localhost:5000/api/teacher/students', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }),
+        fetch('http://localhost:5000/api/teacher/classroom-analytics', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }),
+        fetch('http://localhost:5000/api/teacher/all-students-search', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+      ]);
+      
+      const studentsData = await studentsRes.json();
+      const analyticsData = await analyticsRes.json();
+      const searchData = await searchRes.json();
+
+      if (studentsData.success) setAssignedStudents(studentsData.students);
+      if (analyticsData.success) setClassroomAnalytics(analyticsData.analytics);
+      if (searchData.success) setSearchableStudents(searchData.students);
+    } catch (err) {
+      console.error("Failed to fetch classroom telemetry:", err);
+    } finally {
+      setTelemetryLoading(false);
+    }
+  };
+
+  const fetchStudentDetails = async (studentId: string) => {
+    if (!token) return;
+    setStudentDetailsLoading(true);
+    setSelectedStudentId(studentId);
+    try {
+      const res = await fetch(`http://localhost:5000/api/teacher/student/${studentId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSelectedStudentStats(data.stats);
+      }
+    } catch (err) {
+      console.error("Failed to fetch student details:", err);
+    } finally {
+      setStudentDetailsLoading(false);
+    }
+  };
+
+  const handleAssignStudent = async (studentId: string) => {
+    if (!token) return;
+    setAssigningId(studentId);
+    try {
+      const res = await fetch('http://localhost:5000/api/teacher/assign', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ studentId })
+      });
+      const data = await res.json();
+      if (data.success) {
+        await fetchTelemetry();
+      } else {
+        alert(data.error || "Failed to assign student.");
+      }
+    } catch (err) {
+      console.error("Failed to assign student:", err);
+    } finally {
+      setAssigningId(null);
+    }
+  };
+
   // 2. Dashboard UI States
   const [activeTab, setActiveTab] = useState<'planner' | 'scheduler' | 'telemetry'>('planner');
   const [loading, setLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState('');
   const [shareSuccess, setShareSuccess] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(true);
+
+  useEffect(() => {
+    if (activeTab === 'telemetry') {
+      fetchTelemetry();
+    }
+  }, [activeTab]);
 
   // 3. Syllabus Tracker State
   const [completedChapters, setCompletedChapters] = useState<Record<string, boolean>>({
@@ -555,11 +656,11 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onNavigate }
         {/* User Identity Footer */}
         <div className="p-3 bg-cyber-card rounded-xl border border-cyber-border/20 flex items-center space-x-3 mt-4">
           <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-cyber-purple to-cyber-pink flex items-center justify-center font-outfit text-white font-black text-xs">
-            TR
+            {user?.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'TR'}
           </div>
           <div>
-            <h4 className="text-xs font-bold text-white">Prof. T. Ramachandran</h4>
-            <p className="text-[9px] text-cyber-text/50 font-mono">Senior Science Educator</p>
+            <h4 className="text-xs font-bold text-white">{user?.name || "Teacher"}</h4>
+            <p className="text-[9px] text-cyber-text/50 font-mono">{user?.email || "Teacher Node"}</p>
           </div>
         </div>
       </aside>
@@ -1119,105 +1220,476 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onNavigate }
           {/* C. TELEMETRY TAB VIEW */}
           {activeTab === 'telemetry' && (
             <div className="space-y-6 text-left">
-              
-              <div className="glass-panel p-6 rounded-2xl border border-cyber-border/40 shadow-glass space-y-6">
-                
-                <div className="flex justify-between items-center border-b border-cyber-border/20 pb-3">
-                  <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-cyber-cyan flex items-center gap-1.5">
-                    <BarChart2 className="w-4.5 h-4.5" /> Classroom Attention Telemetry (Real-time Feed)
-                  </h3>
-                  <span className="text-[9px] bg-cyber-cyan/15 text-cyber-cyan px-2 py-0.5 rounded font-mono">LIVE TRACKING</span>
+              {telemetryLoading ? (
+                <div className="glass-panel p-16 rounded-2xl border border-cyber-border/30 text-center flex flex-col justify-center items-center space-y-4">
+                  <div className="w-12 h-12 border-4 border-cyber-cyan border-t-transparent rounded-full animate-spin"></div>
+                  <p className="text-xs font-mono text-cyber-cyan animate-pulse">Syncing classroom telemetric matrix...</p>
                 </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  
-                  {/* Metric 1 */}
-                  <div className="bg-black/35 p-5 rounded-xl border border-cyber-border/10 flex flex-col justify-between items-center text-center space-y-2">
-                    <span className="text-[10px] text-cyber-text/50 uppercase font-mono tracking-wider font-bold">Active Students Connected</span>
-                    <div className="flex items-center gap-1.5 text-cyber-blue font-outfit mt-1">
-                      <Users className="w-5 h-5 animate-pulse" />
-                      <span className="text-xl font-black">32 / 35</span>
+              ) : (
+                <div className="space-y-6">
+                  {/* Classroom KPI Aggregates */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {/* KPI 1 */}
+                    <div className="bg-[#0a0a23]/40 backdrop-blur-md p-4 rounded-2xl border border-cyber-border/30 flex items-center justify-between hover:border-cyber-purple/50 transition-colors">
+                      <div className="space-y-1">
+                        <span className="text-[10px] text-cyber-text/50 uppercase font-mono tracking-wider font-bold">Class Roster</span>
+                        <div className="text-2xl font-black text-white font-outfit">
+                          {classroomAnalytics.totalStudents || 0} <span className="text-xs font-medium text-cyber-text/50">Students</span>
+                        </div>
+                      </div>
+                      <div className="w-10 h-10 rounded-xl bg-cyber-purple/10 border border-cyber-purple/35 flex items-center justify-center text-cyber-purple">
+                        <Users className="w-5 h-5" />
+                      </div>
                     </div>
-                    <span className="text-[9px] text-cyber-text/40 font-mono">3 students offline</span>
-                  </div>
 
-                  {/* Metric 2 */}
-                  <div className="bg-black/35 p-5 rounded-xl border border-cyber-border/10 flex flex-col justify-between items-center text-center space-y-2">
-                    <span className="text-[10px] text-cyber-text/50 uppercase font-mono tracking-wider font-bold">Average Attention Score</span>
-                    <div className="text-xl font-black text-cyber-cyan font-outfit mt-1">86%</div>
-                    <span className="text-[9px] text-emerald-400 font-mono">↑ 4% from last chapter</span>
-                  </div>
-
-                  {/* Metric 3 */}
-                  <div className="bg-black/35 p-5 rounded-xl border border-cyber-border/10 flex flex-col justify-between items-center text-center space-y-2">
-                    <span className="text-[10px] text-cyber-text/50 uppercase font-mono tracking-wider font-bold">Fatigue Alerts / blinks</span>
-                    <div className="flex items-center gap-1.5 text-cyber-pink font-outfit mt-1">
-                      <AlertTriangle className="w-5 h-5 animate-bounce" />
-                      <span className="text-xl font-black">0 Warnings</span>
+                    {/* KPI 2 */}
+                    <div className="bg-[#0a0a23]/40 backdrop-blur-md p-4 rounded-2xl border border-cyber-border/30 flex items-center justify-between hover:border-cyber-cyan/50 transition-colors">
+                      <div className="space-y-1">
+                        <span className="text-[10px] text-cyber-text/50 uppercase font-mono tracking-wider font-bold">Active Today</span>
+                        <div className="text-2xl font-black text-cyber-cyan font-outfit">
+                          {classroomAnalytics.activeTodayCount || 0} <span className="text-xs font-medium text-cyber-text/50">online</span>
+                        </div>
+                      </div>
+                      <div className="w-10 h-10 rounded-xl bg-cyber-cyan/10 border border-cyber-cyan/35 flex items-center justify-center text-cyber-cyan">
+                        <Activity className="w-5 h-5 animate-pulse" />
+                      </div>
                     </div>
-                    <span className="text-[9px] text-cyber-text/40 font-mono">Optimal environment</span>
+
+                    {/* KPI 3 */}
+                    <div className="bg-[#0a0a23]/40 backdrop-blur-md p-4 rounded-2xl border border-cyber-border/30 flex items-center justify-between hover:border-cyber-pink/50 transition-colors">
+                      <div className="space-y-1">
+                        <span className="text-[10px] text-cyber-text/50 uppercase font-mono tracking-wider font-bold">Class Avg Streak</span>
+                        <div className="text-2xl font-black text-cyber-pink font-outfit flex items-baseline gap-1">
+                          {classroomAnalytics.avgStreak || 0} <span className="text-xs font-medium text-cyber-text/50">days</span>
+                        </div>
+                      </div>
+                      <div className="w-10 h-10 rounded-xl bg-cyber-pink/10 border border-cyber-pink/35 flex items-center justify-center text-cyber-pink">
+                        <Flame className="w-5 h-5 animate-bounce" />
+                      </div>
+                    </div>
+
+                    {/* KPI 4 */}
+                    <div className="bg-[#0a0a23]/40 backdrop-blur-md p-4 rounded-2xl border border-cyber-border/30 flex items-center justify-between hover:border-cyber-yellow/50 transition-colors">
+                      <div className="space-y-1">
+                        <span className="text-[10px] text-cyber-text/50 uppercase font-mono tracking-wider font-bold">Quiz Accuracy</span>
+                        <div className="text-2xl font-black text-cyber-yellow font-outfit">
+                          {classroomAnalytics.avgQuizScore || 0}%
+                        </div>
+                      </div>
+                      <div className="w-10 h-10 rounded-xl bg-cyber-yellow/10 border border-cyber-yellow/35 flex items-center justify-center text-cyber-yellow">
+                        <Zap className="w-5 h-5" />
+                      </div>
+                    </div>
                   </div>
 
-                </div>
+                  {/* Main Grid: Student List & AI Insights */}
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    {/* Left: Student Table */}
+                    <div className="lg:col-span-8 glass-panel p-5 rounded-2xl border border-cyber-border/40 shadow-glass flex flex-col space-y-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-cyber-cyan flex items-center gap-1.5">
+                          <GraduationCap className="w-4.5 h-4.5" /> Student Roster Matrix
+                        </h3>
+                        
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            placeholder="Filter students..."
+                            value={studentSearchQuery}
+                            onChange={(e) => setStudentSearchQuery(e.target.value)}
+                            className="bg-black/40 border border-cyber-border/40 px-3 py-1.5 rounded-lg text-xs font-mono text-white focus:outline-none focus:border-cyber-purple placeholder-cyber-text/30"
+                          />
+                          <button
+                            onClick={() => setAssignModalOpen(true)}
+                            className="py-1.5 px-3 rounded-lg bg-cyber-purple hover:opacity-90 text-white font-bold uppercase font-mono text-[10px] tracking-wider flex items-center gap-1 shadow-glow-purple cursor-pointer transition-all"
+                          >
+                            <UserPlus className="w-3.5 h-3.5" /> Add Student
+                          </button>
+                        </div>
+                      </div>
 
-                {/* Simulated Focus Line graph using SVG */}
-                <div className="space-y-2">
-                  <span className="text-[10px] font-mono text-cyber-text/50 uppercase font-bold">Focus telemetry timeline (Past 60 mins)</span>
-                  
-                  <div className="w-full bg-black/40 rounded-2xl border border-cyber-border/10 p-4 relative overflow-hidden h-40">
+                      {assignedStudents.length === 0 ? (
+                        <div className="p-12 text-center border border-dashed border-cyber-border/20 rounded-xl bg-black/10">
+                          <Users className="w-8 h-8 text-cyber-text/30 mx-auto mb-2" />
+                          <p className="text-xs text-cyber-text/60 font-mono">No students assigned to your classroom yet.</p>
+                          <p className="text-[10px] text-cyber-text/40 mt-1 font-sans">Use the "+ Add Student" button to link registered student accounts.</p>
+                        </div>
+                      ) : (
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-left font-mono text-xs border-collapse">
+                            <thead>
+                              <tr className="border-b border-cyber-border/20 text-cyber-text/45 uppercase tracking-wider">
+                                <th className="pb-3 pl-2">Student</th>
+                                <th className="pb-3 text-center">XP</th>
+                                <th className="pb-3 text-center">Streak</th>
+                                <th className="pb-3 text-center">Avg Mastery</th>
+                                <th className="pb-3 text-center">Last Active</th>
+                                <th className="pb-3 text-right pr-2">Action</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {assignedStudents
+                                .filter(s => s.name.toLowerCase().includes(studentSearchQuery.toLowerCase()))
+                                .map(student => {
+                                  return (
+                                    <tr 
+                                      key={student.id}
+                                      onClick={() => fetchStudentDetails(student.id)}
+                                      className="border-b border-cyber-border/10 hover:bg-white/5 transition-colors cursor-pointer group"
+                                    >
+                                      <td className="py-3.5 pl-2 flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-lg bg-cyber-cyan/15 border border-cyber-cyan/20 flex items-center justify-center font-outfit text-cyber-cyan font-black text-xs">
+                                          {student.name.split(' ').map((n: string) => n[0]).join('').toUpperCase()}
+                                        </div>
+                                        <div className="flex flex-col text-left">
+                                          <span className="font-bold text-white group-hover:text-cyber-cyan transition-colors">{student.name}</span>
+                                          <span className="text-[9px] text-cyber-text/50">{student.email}</span>
+                                        </div>
+                                      </td>
+                                      <td className="py-3.5 text-center font-bold">
+                                        <div className="flex flex-col items-center">
+                                          <span className="text-white">{student.xp} <span className="text-[9px] text-cyber-purple/70">XP</span></span>
+                                          <span className="text-[8px] bg-cyber-purple/20 text-cyber-purple px-1.5 rounded-full mt-0.5">Lvl {student.level}</span>
+                                        </div>
+                                      </td>
+                                      <td className="py-3.5 text-center">
+                                        <div className="inline-flex items-center gap-1">
+                                          <Flame className={`w-3.5 h-3.5 ${student.streak > 0 ? 'text-cyber-pink' : 'text-cyber-text/30'}`} />
+                                          <span className={student.streak > 0 ? 'text-cyber-pink font-bold' : 'text-cyber-text/40'}>{student.streak}d</span>
+                                        </div>
+                                      </td>
+                                      <td className="py-3.5 text-center">
+                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                          student.avgMastery >= 75 ? 'bg-cyber-cyan/20 text-cyber-cyan' :
+                                          student.avgMastery >= 50 ? 'bg-cyber-blue/20 text-cyber-blue' :
+                                          'bg-cyber-pink/20 text-cyber-pink'
+                                        }`}>
+                                          {student.avgMastery}%
+                                        </span>
+                                      </td>
+                                      <td className="py-3.5 text-center text-cyber-text/60">
+                                        {student.lastActivity 
+                                          ? new Date(student.lastActivity).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) 
+                                          : 'Never'}
+                                      </td>
+                                      <td className="py-3.5 text-right pr-2">
+                                        <button 
+                                          onClick={(e) => { e.stopPropagation(); fetchStudentDetails(student.id); }}
+                                          className="text-[10px] border border-cyber-cyan/30 hover:border-cyber-cyan bg-cyber-cyan/5 text-cyber-cyan px-2.5 py-1 rounded-lg transition-all cursor-pointer font-bold uppercase tracking-wider"
+                                        >
+                                          Details
+                                        </button>
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Right: AI Insights / Notifications */}
+                    <div className="lg:col-span-4 flex flex-col space-y-4">
+                      <div className="glass-panel p-5 rounded-2xl border border-cyber-border/40 shadow-glass flex-1 flex flex-col space-y-4">
+                        <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-cyber-purple flex items-center gap-1.5">
+                          <Cpu className="w-4.5 h-4.5 animate-pulse" /> AI Classroom Insights
+                        </h3>
+
+                        <div className="flex-1 flex flex-col space-y-3">
+                          {classroomAnalytics.insights.map((insight: any, idx: number) => {
+                            let borderCol = "border-cyber-border/20";
+                            let bgCol = "bg-white/5";
+                            let iconColor = "text-cyber-cyan";
+                            if (insight.type === "danger") {
+                              borderCol = "border-cyber-pink/30";
+                              bgCol = "bg-cyber-pink/5";
+                              iconColor = "text-cyber-pink";
+                            } else if (insight.type === "warning") {
+                              borderCol = "border-cyber-yellow/30";
+                              bgCol = "bg-cyber-yellow/5";
+                              iconColor = "text-cyber-yellow";
+                            } else if (insight.type === "success") {
+                              borderCol = "border-emerald-500/20";
+                              bgCol = "bg-emerald-500/5";
+                              iconColor = "text-emerald-400";
+                            }
+
+                            return (
+                              <div key={idx} className={`p-3 rounded-xl border ${borderCol} ${bgCol} text-left flex items-start space-x-3 transition-colors hover:bg-white/[0.07]`}>
+                                <div className={`shrink-0 mt-0.5 ${iconColor}`}>
+                                  {insight.type === 'danger' ? <AlertTriangle className="w-4.5 h-4.5" /> : 
+                                   insight.type === 'warning' ? <AlertTriangle className="w-4.5 h-4.5" /> :
+                                   insight.type === 'success' ? <CheckCircle2 className="w-4.5 h-4.5" /> :
+                                   <Info className="w-4.5 h-4.5 text-cyber-cyan font-bold" />}
+                                </div>
+                                <span className="font-sans text-[11px] leading-relaxed text-cyber-text">{insight.text}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        <div className="p-3 bg-[#0a0a23]/60 rounded-xl border border-cyber-border/20 font-mono text-[9px] text-cyber-text/50">
+                          <strong>COGNITIVE INSIGHTS ENGINE:</strong> Classroom indexes are calculated per activity log. insights compile performance flags dynamically.
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Subject Mastery Classroom Averages */}
+                  <div className="glass-panel p-5 rounded-2xl border border-cyber-border/40 shadow-glass text-left space-y-4">
+                    <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-cyber-cyan flex items-center gap-1.5">
+                      <BarChart2 className="w-4.5 h-4.5" /> Classroom Subject Mastery Index (Averages)
+                    </h3>
                     
-                    {/* SVG Line Graph */}
-                    <svg className="w-full h-full" viewBox="0 0 800 120" preserveAspectRatio="none">
-                      <defs>
-                        <linearGradient id="neonGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#00f2fe" stopOpacity="0.4" />
-                          <stop offset="100%" stopColor="#9b5de5" stopOpacity="0.0" />
-                        </linearGradient>
-                      </defs>
-                      
-                      {/* Grid Lines */}
-                      <line x1="0" y1="30" x2="800" y2="30" stroke="rgba(0, 242, 254, 0.05)" strokeDasharray="5,5" />
-                      <line x1="0" y1="60" x2="800" y2="60" stroke="rgba(0, 242, 254, 0.05)" strokeDasharray="5,5" />
-                      <line x1="0" y1="90" x2="800" y2="90" stroke="rgba(0, 242, 254, 0.05)" strokeDasharray="5,5" />
+                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4 pt-2">
+                      {["Science", "Mathematics", "Social Science", "English", "Hindi"].map(sub => {
+                        const score = classroomAnalytics.subjectAverages?.[sub] || 0;
+                        let barCol = "from-cyber-purple to-cyber-pink";
+                        let tagCol = "text-cyber-purple";
+                        if (sub === "Science") {
+                          barCol = "from-emerald-600 to-teal-400";
+                          tagCol = "text-emerald-400";
+                        } else if (sub === "Mathematics") {
+                          barCol = "from-cyber-blue to-cyber-cyan";
+                          tagCol = "text-cyber-cyan";
+                        } else if (sub === "English") {
+                          barCol = "from-cyber-purple to-indigo-500";
+                          tagCol = "text-cyber-purple";
+                        } else if (sub === "Hindi") {
+                          barCol = "from-cyber-yellow to-amber-500";
+                          tagCol = "text-cyber-yellow";
+                        }
 
-                      {/* Area Under Graph */}
-                      <path 
-                        d="M 0 120 L 0 50 Q 100 20 200 60 T 400 30 T 600 70 T 800 40 L 800 120 Z" 
-                        fill="url(#neonGradient)" 
-                      />
+                        return (
+                          <div key={sub} className="bg-black/30 p-3 rounded-xl border border-cyber-border/10 flex flex-col justify-between space-y-2">
+                            <span className="font-mono text-[10px] text-cyber-text/60 uppercase font-bold truncate">{sub}</span>
+                            <div className="flex justify-between items-baseline font-mono font-black mt-1">
+                              <span className="text-base text-white">{score}%</span>
+                              <span className={`text-[8px] uppercase ${tagCol}`}>Mastery</span>
+                            </div>
+                            <div className="w-full h-1.5 bg-black/40 rounded-full border border-cyber-border/10 overflow-hidden mt-1">
+                              <div 
+                                className={`h-full bg-gradient-to-r ${barCol}`} 
+                                style={{ width: `${score}%` }}
+                              ></div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
 
-                      {/* Main Trend Line */}
-                      <path 
-                        d="M 0 50 Q 100 20 200 60 T 400 30 T 600 70 T 800 40" 
-                        fill="transparent" 
-                        stroke="#00f2fe" 
-                        strokeWidth="3.5" 
-                        strokeLinecap="round"
-                        className="shadow-glow-blue"
-                      />
-
-                      {/* Dots on Graph */}
-                      <circle cx="200" cy="60" r="4.5" fill="#f15bb5" />
-                      <circle cx="400" cy="30" r="4.5" fill="#fee440" />
-                      <circle cx="600" cy="70" r="4.5" fill="#f15bb5" />
-                    </svg>
-
-                    <div className="absolute top-2 left-4 font-mono text-[9px] text-cyber-blue">80% Focus</div>
-                    <div className="absolute bottom-2 left-4 font-mono text-[9px] text-cyber-purple">0 mins</div>
-                    <div className="absolute bottom-2 right-4 font-mono text-[9px] text-cyber-purple">60 mins (Current)</div>
+                  {/* Privacy Disclosure Footer */}
+                  <div className="text-[10px] text-cyber-text/65 leading-relaxed bg-[#0a0a23]/40 p-4 rounded-xl border border-cyber-border/10 flex items-center gap-3">
+                    <ShieldCheck className="w-6 h-6 text-cyber-cyan shrink-0 animate-pulse" />
+                    <span className="font-sans">
+                      <strong>PRIVACY STATEMENT:</strong> Student learning telemetry is compiled strictly from completed worksheets, quizzes, Feynman Arena Dialogues, and study units logged on the Vidya AI platform. Real-time client eye-tracking computations are executed sandbox-side and only shared as aggregated anonymous scores.
+                    </span>
                   </div>
                 </div>
+              )}
 
-                {/* Privacy Warning Disclosure */}
-                <div className="text-[10px] text-cyber-text/65 leading-relaxed bg-[#0a0a23]/40 p-4 rounded-xl border border-cyber-border/10 flex items-center gap-3">
-                  <ShieldCheck className="w-6 h-6 text-cyber-cyan shrink-0 animate-pulse" />
-                  <span className="font-sans">
-                    <strong>PRIVACY SECURED:</strong> Eye tracking calculations (FaceMesh EAR coefficients) run locally inside the student's browser device. No personal telemetry data, video streams, or photos are transmitted to the orchestrator database. The telemetry displays only aggregate statistics.
-                  </span>
+              {/* MOCK/REAL ASSIGN STUDENT OVERLAY MODAL */}
+              {assignModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+                  <div className="glass-panel w-full max-w-md p-6 rounded-2xl border border-cyber-border shadow-2xl flex flex-col space-y-4">
+                    <div className="flex justify-between items-center border-b border-cyber-border/20 pb-3">
+                      <h3 className="text-sm font-bold text-white font-outfit uppercase tracking-wider flex items-center gap-2">
+                        <UserPlus className="w-5 h-5 text-cyber-purple" /> Link Student to Classroom
+                      </h3>
+                      <button 
+                        onClick={() => setAssignModalOpen(false)}
+                        className="text-cyber-text/50 hover:text-white transition-colors cursor-pointer text-sm font-bold border border-white/10 hover:border-white/30 px-2 py-0.5 rounded"
+                      >
+                        ✕
+                      </button>
+                    </div>
+
+                    <div className="relative">
+                      <Search className="absolute left-3 top-3 w-4 h-4 text-cyber-text/50" />
+                      <input
+                        type="text"
+                        placeholder="Search student by name or email..."
+                        value={assignSearchQuery}
+                        onChange={(e) => setAssignSearchQuery(e.target.value)}
+                        className="w-full bg-black/40 border border-cyber-border/60 pl-9 pr-4 py-2.5 rounded-xl text-xs font-mono text-white focus:outline-none focus:border-cyber-purple placeholder-cyber-text/30"
+                      />
+                    </div>
+
+                    <div className="flex-1 max-h-64 overflow-y-auto space-y-2 pr-1">
+                      {searchableStudents.filter(s => 
+                        s.name.toLowerCase().includes(assignSearchQuery.toLowerCase()) || 
+                        s.email.toLowerCase().includes(assignSearchQuery.toLowerCase())
+                      ).length === 0 ? (
+                        <p className="text-xs text-cyber-text/50 font-mono py-6 text-center">No registered students match your search.</p>
+                      ) : (
+                        searchableStudents
+                          .filter(s => 
+                            s.name.toLowerCase().includes(assignSearchQuery.toLowerCase()) || 
+                            s.email.toLowerCase().includes(assignSearchQuery.toLowerCase())
+                          )
+                          .map(student => (
+                            <div 
+                              key={student.id}
+                              className="p-3 bg-black/20 hover:bg-black/35 rounded-xl border border-cyber-border/10 flex items-center justify-between transition-colors"
+                            >
+                              <div className="text-left font-mono">
+                                <h4 className="text-xs font-bold text-white leading-none">{student.name}</h4>
+                                <span className="text-[9px] text-cyber-text/50 mt-1 block">{student.email}</span>
+                              </div>
+                              <button
+                                onClick={() => handleAssignStudent(student.id)}
+                                disabled={assigningId === student.id}
+                                className="text-[10px] font-bold font-mono uppercase bg-cyber-purple hover:bg-opacity-85 text-white py-1 px-3 rounded-lg shadow-glow-purple border border-cyber-purple/50 cursor-pointer disabled:opacity-50 transition-all"
+                              >
+                                {assigningId === student.id ? "Linking..." : "+ Link"}
+                              </button>
+                            </div>
+                          ))
+                      )}
+                    </div>
+                  </div>
                 </div>
+              )}
 
-              </div>
+              {/* STUDENT DETAILED TELEMETRY PROFILE PANEL */}
+              {selectedStudentId && (
+                <div className="fixed inset-0 z-50 flex items-center justify-end bg-black/70 backdrop-blur-sm">
+                  {/* Backdrop click to close */}
+                  <div className="absolute inset-0 cursor-pointer" onClick={() => { setSelectedStudentId(null); setSelectedStudentStats(null); }}></div>
+                  
+                  <div className="relative glass-panel w-full max-w-xl h-screen bg-[#070519]/90 border-l border-cyber-border shadow-2xl flex flex-col p-6 overflow-y-auto space-y-6 animate-slide-in">
+                    
+                    {/* Header */}
+                    <div className="flex justify-between items-center border-b border-cyber-border/20 pb-4">
+                      <div className="flex items-center space-x-3 text-left">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyber-cyan to-cyber-blue flex items-center justify-center font-outfit text-white font-black text-sm">
+                          {selectedStudentStats?.userName?.split(' ').map((n: string) => n[0]).join('').toUpperCase() || 'ST'}
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-bold text-white leading-none font-outfit">{selectedStudentStats?.userName || "Loading student..."}</h3>
+                          <span className="text-[9px] text-cyber-text/50 font-mono mt-1.5 block">STUDENT PROFILE TELEMETRY</span>
+                        </div>
+                      </div>
 
+                      <button 
+                        onClick={() => { setSelectedStudentId(null); setSelectedStudentStats(null); }}
+                        className="text-cyber-text/50 hover:text-white transition-colors cursor-pointer text-sm font-bold border border-white/10 hover:border-white/30 px-3 py-1 rounded"
+                      >
+                        CLOSE REPORT ✕
+                      </button>
+                    </div>
+
+                    {studentDetailsLoading ? (
+                      <div className="flex-1 flex flex-col justify-center items-center space-y-3 py-12">
+                        <div className="w-10 h-10 border-4 border-cyber-purple border-t-transparent rounded-full animate-spin"></div>
+                        <span className="text-xs font-mono text-cyber-purple animate-pulse">Compiling student cognitive metrics...</span>
+                      </div>
+                    ) : selectedStudentStats ? (
+                      <div className="space-y-6">
+                        
+                        {/* Summary Metrics */}
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="bg-black/35 p-3 rounded-xl border border-cyber-border/10 text-left flex flex-col justify-between space-y-1.5">
+                            <span className="text-[9px] text-cyber-text/50 font-mono uppercase tracking-wider font-bold">Study Experience</span>
+                            <div className="text-white font-mono font-bold text-xs">
+                              {selectedStudentStats.totalXP} <span className="text-[9px] text-cyber-purple font-normal">XP</span>
+                            </div>
+                            <span className="text-[8px] bg-cyber-purple/20 text-cyber-purple font-mono px-2 py-0.5 rounded-full w-max">Level {selectedStudentStats.level}</span>
+                          </div>
+
+                          <div className="bg-black/35 p-3 rounded-xl border border-cyber-border/10 text-left flex flex-col justify-between space-y-1.5">
+                            <span className="text-[9px] text-cyber-text/50 font-mono uppercase tracking-wider font-bold">Daily Streak</span>
+                            <div className="text-white font-mono font-bold text-xs flex items-center gap-1">
+                              <Flame className="w-3.5 h-3.5 text-cyber-pink" />
+                              <span>{selectedStudentStats.weeklyStreak} Days</span>
+                            </div>
+                            <span className="text-[8px] text-cyber-text/40 font-mono">Consistently learning</span>
+                          </div>
+                        </div>
+
+                        {/* Subject Mastery Progress Bars */}
+                        <div className="glass-panel p-4 rounded-xl border border-cyber-border/20 text-left space-y-3.5">
+                          <h4 className="text-[10px] font-mono font-bold text-cyber-cyan uppercase tracking-wider border-b border-cyber-border/10 pb-1.5 flex items-center gap-1">
+                            <GraduationCap className="w-4 h-4" /> Concept Mastery Index
+                          </h4>
+                          <div className="space-y-3 font-mono text-xs">
+                            {Object.keys(selectedStudentStats.subjectProgress).map(sub => {
+                              const prog = selectedStudentStats.subjectProgress[sub] || 0;
+                              return (
+                                <div key={sub} className="space-y-1">
+                                  <div className="flex justify-between text-[10px]">
+                                    <span className="font-bold text-white">{sub}</span>
+                                    <span className="text-cyber-cyan font-bold">{prog}%</span>
+                                  </div>
+                                  <div className="w-full h-2 bg-black/40 rounded-full border border-cyber-border/10 overflow-hidden">
+                                    <div 
+                                      className="h-full bg-gradient-to-r from-cyber-blue to-cyber-cyan" 
+                                      style={{ width: `${prog}%` }}
+                                    ></div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* Weak Topics Review List */}
+                        <div className="glass-panel p-4 rounded-xl border border-cyber-border/20 text-left space-y-3">
+                          <h4 className="text-[10px] font-mono font-bold text-cyber-pink uppercase tracking-wider border-b border-cyber-border/10 pb-1.5 flex items-center gap-1">
+                            <AlertTriangle className="w-4 h-4" /> Weak Concepts Identified
+                          </h4>
+                          {selectedStudentStats.weakTopics.length === 0 ? (
+                            <p className="text-[10px] text-cyber-text/50 font-mono py-2">No weak topics found! Excellent performance.</p>
+                          ) : (
+                            <div className="flex flex-col space-y-2.5">
+                              {selectedStudentStats.weakTopics.map((wt: any, idx: number) => (
+                                <div key={idx} className="p-2.5 rounded-xl border border-cyber-pink/20 bg-cyber-pink/5 flex items-center justify-between text-left font-mono text-[10px]">
+                                  <div className="flex flex-col">
+                                    <span className="font-bold text-white">{wt.topic}</span>
+                                    <span className="text-[8px] text-cyber-text/50 mt-0.5">{wt.subject} • {wt.chapter}</span>
+                                  </div>
+                                  <span className="font-bold text-cyber-pink bg-cyber-pink/15 px-2 py-0.5 rounded-full">{wt.score}%</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Recent Quiz History */}
+                        <div className="glass-panel p-4 rounded-xl border border-cyber-border/20 text-left space-y-3">
+                          <h4 className="text-[10px] font-mono font-bold text-cyber-purple uppercase tracking-wider border-b border-cyber-border/10 pb-1.5 flex items-center gap-1">
+                            <Award className="w-4.5 h-4.5" /> Recent Quiz Index
+                          </h4>
+                          {selectedStudentStats.quizAnalytics.recentQuizHistory.length === 0 ? (
+                            <p className="text-[10px] text-cyber-text/50 font-mono py-2">No quizzes completed yet.</p>
+                          ) : (
+                            <div className="flex flex-col space-y-2">
+                              {selectedStudentStats.quizAnalytics.recentQuizHistory.map((q: any, idx: number) => (
+                                <div key={idx} className="p-2 bg-black/20 rounded-xl border border-cyber-border/10 flex items-center justify-between font-mono text-[10px]">
+                                  <div className="flex flex-col text-left">
+                                    <span className="font-bold text-white truncate max-w-[280px]">{q.topic}</span>
+                                    <span className="text-[8px] text-cyber-text/40 mt-0.5">{q.subject} • {q.date}</span>
+                                  </div>
+                                  <span className={`font-bold px-2 py-0.5 rounded-full ${
+                                    q.score >= 80 ? 'text-emerald-400 bg-emerald-500/10' :
+                                    q.score >= 50 ? 'text-cyber-cyan bg-cyber-cyan/10' :
+                                    'text-cyber-pink bg-cyber-pink/10'
+                                  }`}>{q.score}%</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                      </div>
+                    ) : (
+                      <p className="text-xs text-cyber-text/40 font-mono text-center py-12">Failed to retrieve telemetry profile.</p>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

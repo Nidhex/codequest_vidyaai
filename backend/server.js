@@ -4878,6 +4878,239 @@ app.post('/api/learning/activity/log', authenticateToken, (req, res) => {
   }
 });
 
+function compileStudentStats(userId) {
+  const logs = db.getStudyLogs(userId);
+  const user = db.getUser(userId);
+
+  if (!user) {
+    throw new Error("User not found");
+  }
+
+  // A. Study Overview
+  const totalStudyTime = logs.reduce((acc, l) => acc + (l.timeSpent || 0), 0);
+  const lessonsCompletedCount = logs.filter(l => l.activityType === 'lesson').length;
+  const weeklyStreak = user.streak || 0;
+  const totalXP = user.xp;
+  const level = user.level;
+
+  // B. Subject Progress (from user profile, recalculated dynamically by db.js)
+  const subjectProgress = user.subjectProgress || {};
+
+  // C. Weak Topics Detection
+  const weakTopicsMap = {};
+  logs.forEach(l => {
+    if (l.score !== undefined && l.topic) {
+      if (l.score < 70) {
+        weakTopicsMap[l.topic] = {
+          subject: l.subject || "Science",
+          chapter: l.chapter || "",
+          topic: l.topic,
+          score: Math.round(l.score),
+          timestamp: l.timestamp
+        };
+      } else if (l.score >= 80) {
+        delete weakTopicsMap[l.topic]; // Mastery achieved, remove
+      }
+    }
+  });
+  const weakTopics = Object.values(weakTopicsMap);
+
+  // D. Quiz Analytics
+  const quizLogs = logs.filter(l => l.activityType === 'quiz');
+  let avgQuizScore = 0;
+  let quizAccuracy = 0;
+  let hardestSubject = "None";
+  let easiestSubject = "None";
+
+  if (quizLogs.length > 0) {
+    const totalScore = quizLogs.reduce((acc, q) => acc + (q.score || 0), 0);
+    avgQuizScore = Math.round(totalScore / quizLogs.length);
+
+    const totalQ = quizLogs.reduce((acc, q) => acc + (q.totalQuestions || 0), 0);
+    const totalC = quizLogs.reduce((acc, q) => acc + (q.correctAnswers || 0), 0);
+    quizAccuracy = totalQ > 0 ? Math.round((totalC / totalQ) * 100) : avgQuizScore;
+
+    // Group by subject to find easiest/hardest
+    const subjScores = {};
+    quizLogs.forEach(q => {
+      const s = q.subject || "Science";
+      if (!subjScores[s]) subjScores[s] = [];
+      subjScores[s].push(q.score || 0);
+    });
+
+    let minAvg = Infinity;
+    let maxAvg = -Infinity;
+    Object.keys(subjScores).forEach(s => {
+      const avg = subjScores[s].reduce((a, b) => a + b, 0) / subjScores[s].length;
+      if (avg < minAvg) {
+        minAvg = avg;
+        hardestSubject = s;
+      }
+      if (avg > maxAvg) {
+        maxAvg = avg;
+        easiestSubject = s;
+      }
+    });
+  }
+
+  const recentQuizHistory = quizLogs
+    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+    .slice(0, 5)
+    .map(q => ({
+      id: q.id,
+      topic: q.topic || q.chapter || "General Practice",
+      subject: q.subject,
+      score: Math.round(q.score || 0),
+      date: new Date(q.timestamp).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })
+    }));
+
+  // E. Learning Heatmap (last 28 days)
+  const heatmap = [];
+  const dayMs = 24 * 60 * 60 * 1000;
+  const now = Date.now();
+  
+  // Group logs by date string
+  const logsByDate = {};
+  const logsMinutesByDate = {};
+  const logsXpByDate = {};
+  logs.forEach(l => {
+    const dateStr = new Date(l.timestamp).toISOString().split('T')[0];
+    logsByDate[dateStr] = (logsByDate[dateStr] || 0) + 1;
+    logsMinutesByDate[dateStr] = (logsMinutesByDate[dateStr] || 0) + (l.timeSpent || 0);
+    logsXpByDate[dateStr] = (logsXpByDate[dateStr] || 0) + (l.xpEarned || 30);
+  });
+
+  for (let i = 27; i >= 0; i--) {
+    const d = new Date(now - i * dayMs);
+    const dateStr = d.toISOString().split('T')[0];
+    heatmap.push({
+      date: dateStr,
+      count: logsByDate[dateStr] || 0,
+      minutes: Math.round(logsMinutesByDate[dateStr] || 0),
+      xp: logsXpByDate[dateStr] || 0
+    });
+  }
+
+  // F. Focus Tracking
+  const activeSessions = logs.filter(l => l.timeSpent > 0);
+  const avgSessionDuration = activeSessions.length > 0
+    ? Math.round(activeSessions.reduce((acc, l) => acc + l.timeSpent, 0) / activeSessions.length)
+    : 0;
+
+  // Peak focus hour calculation
+  const hourCounts = {};
+  logs.forEach(l => {
+    const hour = new Date(l.timestamp).getHours();
+    hourCounts[hour] = (hourCounts[hour] || 0) + 1;
+  });
+  let peakHourVal = 10; // Default 10 AM
+  let maxHourCount = 0;
+  Object.keys(hourCounts).forEach(h => {
+    if (hourCounts[h] > maxHourCount) {
+      maxHourCount = hourCounts[h];
+      peakHourVal = parseInt(h);
+    }
+  });
+  const suffix = peakHourVal >= 12 ? "PM" : "AM";
+  const displayHour = peakHourVal % 12 === 0 ? 12 : peakHourVal % 12;
+  const peakFocusHour = logs.length > 0 ? `${displayHour}:00 ${suffix}` : 'N/A';
+
+  // G. AI Recommendations Engine
+  const recommendations = [];
+  
+  // 1. Check for improvement trends in history
+  const quizScoresBySubject = {};
+  quizLogs.forEach(q => {
+    if (!quizScoresBySubject[q.subject]) quizScoresBySubject[q.subject] = [];
+    quizScoresBySubject[q.subject].push(q.score);
+  });
+
+  Object.keys(quizScoresBySubject).forEach(subj => {
+    const scores = quizScoresBySubject[subj];
+    if (scores.length >= 2) {
+      const lastScore = scores[scores.length - 1];
+      const prevScore = scores[scores.length - 2];
+      if (lastScore > prevScore) {
+        const improvement = Math.round(lastScore - prevScore);
+        recommendations.push({
+          type: "insight",
+          title: `${subj} Efficiency Boost!`,
+          description: `Your ${subj} scores rose by ${improvement}% after completing corresponding study units.`,
+          actionLabel: "Keep it Up",
+          subject: subj,
+          topic: ""
+        });
+      }
+    }
+  });
+
+  // 2. Check for weak topics that need revision
+  if (weakTopics.length > 0) {
+    weakTopics.slice(0, 2).forEach(wt => {
+      recommendations.push({
+        type: "revision",
+        title: `Needs Practice: ${wt.topic}`,
+        description: `Your last quiz score was ${wt.score}%. We recommend reviewing the "${wt.chapter || wt.topic}" chapter inside the Learn module.`,
+        actionLabel: "Revise Chapter",
+        subject: wt.subject,
+        topic: wt.topic
+      });
+    });
+  }
+
+  // 3. Dynamic Feynman / Socratic suggestions based on active subjects
+  const completedLessonLogs = logs.filter(l => l.activityType === 'lesson');
+  if (completedLessonLogs.length > 0) {
+    const lastLesson = completedLessonLogs[completedLessonLogs.length - 1];
+    recommendations.push({
+      type: "feynman",
+      title: `Deepen: ${lastLesson.topic}`,
+      description: `Use Feynman Mode to explain "${lastLesson.topic}" in your own words. Teaching others is the best way to verify absolute clarity!`,
+      actionLabel: "Start Feynman",
+      subject: lastLesson.subject,
+      topic: lastLesson.topic
+    });
+  }
+
+  // 4. Default dynamic challenge fallback
+  if (recommendations.length < 3) {
+    recommendations.push({
+      type: "quiz",
+      title: "Daily Practice Challenge",
+      description: "Solve a quick 5-question adaptive quiz on your current subject to maintain your study streak.",
+      actionLabel: "Take Quiz",
+      subject: "Science",
+      topic: "Crop Production"
+    });
+  }
+
+  return {
+    userId,
+    userName: user.name,
+    totalStudyTime,
+    lessonsCompletedCount,
+    weeklyStreak,
+    totalXP,
+    level,
+    subjectProgress,
+    weakTopics,
+    quizAnalytics: {
+      avgQuizScore,
+      quizAccuracy,
+      hardestSubject,
+      easiestSubject,
+      recentQuizHistory
+    },
+    heatmap,
+    focusTracking: {
+      avgSessionDuration,
+      peakFocusHour,
+      attentionHistory: user.attentionScores || []
+    },
+    recommendations
+  };
+}
+
 // 2. Fetch Compiled Learning Analytics
 app.get('/api/learning/activity/stats', authenticateToken, (req, res) => {
   const userId = req.user.id;
@@ -4890,237 +5123,10 @@ app.get('/api/learning/activity/stats', authenticateToken, (req, res) => {
   }
 
   try {
-    const logs = db.getStudyLogs(userId);
-    const user = db.getUser(userId);
-
-    if (!user) {
-      return res.status(404).json({ success: false, error: "User not found" });
-    }
-
-    // A. Study Overview
-    const totalStudyTime = logs.reduce((acc, l) => acc + (l.timeSpent || 0), 0);
-    const lessonsCompletedCount = logs.filter(l => l.activityType === 'lesson').length;
-    const weeklyStreak = user.streak || 0;
-    const totalXP = user.xp;
-    const level = user.level;
-
-    // B. Subject Progress (from user profile, recalculated dynamically by db.js)
-    const subjectProgress = user.subjectProgress || {};
-
-    // C. Weak Topics Detection
-    const weakTopicsMap = {};
-    logs.forEach(l => {
-      if (l.score !== undefined && l.topic) {
-        if (l.score < 70) {
-          weakTopicsMap[l.topic] = {
-            subject: l.subject || "Science",
-            chapter: l.chapter || "",
-            topic: l.topic,
-            score: Math.round(l.score),
-            timestamp: l.timestamp
-          };
-        } else if (l.score >= 80) {
-          delete weakTopicsMap[l.topic]; // Mastery achieved, remove
-        }
-      }
-    });
-    const weakTopics = Object.values(weakTopicsMap);
-
-    // D. Quiz Analytics
-    const quizLogs = logs.filter(l => l.activityType === 'quiz');
-    let avgQuizScore = 0;
-    let quizAccuracy = 0;
-    let hardestSubject = "None";
-    let easiestSubject = "None";
-
-    if (quizLogs.length > 0) {
-      const totalScore = quizLogs.reduce((acc, q) => acc + (q.score || 0), 0);
-      avgQuizScore = Math.round(totalScore / quizLogs.length);
-
-      const totalQ = quizLogs.reduce((acc, q) => acc + (q.totalQuestions || 0), 0);
-      const totalC = quizLogs.reduce((acc, q) => acc + (q.correctAnswers || 0), 0);
-      quizAccuracy = totalQ > 0 ? Math.round((totalC / totalQ) * 100) : avgQuizScore;
-
-      // Group by subject to find easiest/hardest
-      const subjScores = {};
-      quizLogs.forEach(q => {
-        const s = q.subject || "Science";
-        if (!subjScores[s]) subjScores[s] = [];
-        subjScores[s].push(q.score || 0);
-      });
-
-      let minAvg = Infinity;
-      let maxAvg = -Infinity;
-      Object.keys(subjScores).forEach(s => {
-        const avg = subjScores[s].reduce((a, b) => a + b, 0) / subjScores[s].length;
-        if (avg < minAvg) {
-          minAvg = avg;
-          hardestSubject = s;
-        }
-        if (avg > maxAvg) {
-          maxAvg = avg;
-          easiestSubject = s;
-        }
-      });
-    }
-
-    const recentQuizHistory = quizLogs
-      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
-      .slice(0, 5)
-      .map(q => ({
-        id: q.id,
-        topic: q.topic || q.chapter || "General Practice",
-        subject: q.subject,
-        score: Math.round(q.score || 0),
-        date: new Date(q.timestamp).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })
-      }));
-
-    // E. Learning Heatmap (last 28 days)
-    const heatmap = [];
-    const dayMs = 24 * 60 * 60 * 1000;
-    
-    // Group logs by date string
-    const logsByDate = {};
-    const logsMinutesByDate = {};
-    const logsXpByDate = {};
-    logs.forEach(l => {
-      const dateStr = new Date(l.timestamp).toISOString().split('T')[0];
-      logsByDate[dateStr] = (logsByDate[dateStr] || 0) + 1;
-      logsMinutesByDate[dateStr] = (logsMinutesByDate[dateStr] || 0) + (l.timeSpent || 0);
-      logsXpByDate[dateStr] = (logsXpByDate[dateStr] || 0) + (l.xpEarned || 30);
-    });
-
-    for (let i = 27; i >= 0; i--) {
-      const d = new Date(now - i * dayMs);
-      const dateStr = d.toISOString().split('T')[0];
-      heatmap.push({
-        date: dateStr,
-        count: logsByDate[dateStr] || 0,
-        minutes: Math.round(logsMinutesByDate[dateStr] || 0),
-        xp: logsXpByDate[dateStr] || 0
-      });
-    }
-
-    // F. Focus Tracking
-    const activeSessions = logs.filter(l => l.timeSpent > 0);
-    const avgSessionDuration = activeSessions.length > 0
-      ? Math.round(activeSessions.reduce((acc, l) => acc + l.timeSpent, 0) / activeSessions.length)
-      : 0;
-
-    // Peak focus hour calculation
-    const hourCounts = {};
-    logs.forEach(l => {
-      const hour = new Date(l.timestamp).getHours();
-      hourCounts[hour] = (hourCounts[hour] || 0) + 1;
-    });
-    let peakHourVal = 10; // Default 10 AM
-    let maxHourCount = 0;
-    Object.keys(hourCounts).forEach(h => {
-      if (hourCounts[h] > maxHourCount) {
-        maxHourCount = hourCounts[h];
-        peakHourVal = parseInt(h);
-      }
-    });
-    const suffix = peakHourVal >= 12 ? "PM" : "AM";
-    const displayHour = peakHourVal % 12 === 0 ? 12 : peakHourVal % 12;
-    const peakFocusHour = logs.length > 0 ? `${displayHour}:00 ${suffix}` : 'N/A';
-
-    // G. AI Recommendations Engine
-    const recommendations = [];
-    
-    // 1. Check for improvement trends in history
-    const quizScoresBySubject = {};
-    quizLogs.forEach(q => {
-      if (!quizScoresBySubject[q.subject]) quizScoresBySubject[q.subject] = [];
-      quizScoresBySubject[q.subject].push(q.score);
-    });
-
-    Object.keys(quizScoresBySubject).forEach(subj => {
-      const scores = quizScoresBySubject[subj];
-      if (scores.length >= 2) {
-        const lastScore = scores[scores.length - 1];
-        const prevScore = scores[scores.length - 2];
-        if (lastScore > prevScore) {
-          const improvement = Math.round(lastScore - prevScore);
-          recommendations.push({
-            type: "insight",
-            title: `${subj} Efficiency Boost!`,
-            description: `Your ${subj} scores rose by ${improvement}% after completing corresponding study units.`,
-            actionLabel: "Keep it Up",
-            subject: subj,
-            topic: ""
-          });
-        }
-      }
-    });
-
-    // 2. Check for weak topics that need revision
-    if (weakTopics.length > 0) {
-      weakTopics.slice(0, 2).forEach(wt => {
-        recommendations.push({
-          type: "revision",
-          title: `Needs Practice: ${wt.topic}`,
-          description: `Your last quiz score was ${wt.score}%. We recommend reviewing the "${wt.chapter || wt.topic}" chapter inside the Learn module.`,
-          actionLabel: "Revise Chapter",
-          subject: wt.subject,
-          topic: wt.topic
-        });
-      });
-    }
-
-    // 3. Dynamic Feynman / Socratic suggestions based on active subjects
-    const completedLessonLogs = logs.filter(l => l.activityType === 'lesson');
-    if (completedLessonLogs.length > 0) {
-      const lastLesson = completedLessonLogs[completedLessonLogs.length - 1];
-      recommendations.push({
-        type: "feynman",
-        title: `Deepen: ${lastLesson.topic}`,
-        description: `Use Feynman Mode to explain "${lastLesson.topic}" in your own words. Teaching others is the best way to verify absolute clarity!`,
-        actionLabel: "Start Feynman",
-        subject: lastLesson.subject,
-        topic: lastLesson.topic
-      });
-    }
-
-    // 4. Default dynamic challenge fallback
-    if (recommendations.length < 3) {
-      recommendations.push({
-        type: "quiz",
-        title: "Daily Practice Challenge",
-        description: "Solve a quick 5-question adaptive quiz on your current subject to maintain your study streak.",
-        actionLabel: "Take Quiz",
-        subject: "Science",
-        topic: "Crop Production"
-      });
-    }
-
+    const statsPayload = compileStudentStats(userId);
     const responsePayload = {
       success: true,
-      stats: {
-        userId,
-        userName: user.name,
-        totalStudyTime,
-        lessonsCompletedCount,
-        weeklyStreak,
-        totalXP,
-        level,
-        subjectProgress,
-        weakTopics,
-        quizAnalytics: {
-          avgQuizScore,
-          quizAccuracy,
-          hardestSubject,
-          easiestSubject,
-          recentQuizHistory
-        },
-        heatmap,
-        focusTracking: {
-          avgSessionDuration,
-          peakFocusHour,
-          attentionHistory: user.attentionScores || []
-        },
-        recommendations
-      }
+      stats: statsPayload
     };
 
     // Cache the compiled analytics response
@@ -5130,10 +5136,201 @@ app.get('/api/learning/activity/stats', authenticateToken, (req, res) => {
     };
 
     res.json(responsePayload);
-
   } catch (err) {
     console.error("Failed to compile analytics:", err);
     res.status(500).json({ success: false, error: "Failed to compile learning analytics" });
+  }
+});
+
+// ----------------------------------------------------
+// 🎓 TEACHER OPERATIONS & CLASSROOM TELEMETRY ROUTES
+// ----------------------------------------------------
+
+// 1. Get assigned students list with basic stats
+app.get('/api/teacher/students', authenticateToken, requireTeacherRole, (req, res) => {
+  try {
+    const students = db.getStudentsByTeacher(req.user.id);
+    res.json({ success: true, students });
+  } catch (err) {
+    console.error("Failed to retrieve assigned students:", err);
+    res.status(500).json({ success: false, error: "Failed to retrieve assigned students" });
+  }
+});
+
+// 2. Get detailed analytics for a specific student
+app.get('/api/teacher/student/:id', authenticateToken, requireTeacherRole, (req, res) => {
+  const studentId = req.params.id;
+  try {
+    // Role isolation: Verify student is assigned to this teacher
+    const teacher = db.getUser(req.user.id);
+    if (!teacher || !teacher.assignedStudents || !teacher.assignedStudents.includes(studentId)) {
+      return res.status(403).json({ success: false, error: "Access denied. Student is not assigned to you." });
+    }
+    const stats = compileStudentStats(studentId);
+    res.json({ success: true, stats });
+  } catch (err) {
+    console.error("Failed to fetch student details:", err);
+    res.status(500).json({ success: false, error: "Failed to fetch student details" });
+  }
+});
+
+// 3. Get aggregated classroom analytics and AI insights
+app.get('/api/teacher/classroom-analytics', authenticateToken, requireTeacherRole, (req, res) => {
+  try {
+    const teacherId = req.user.id;
+    const students = db.getStudentsByTeacher(teacherId);
+
+    if (students.length === 0) {
+      return res.json({
+        success: true,
+        analytics: {
+          totalStudents: 0,
+          avgStreak: 0,
+          avgQuizScore: 0,
+          activeTodayCount: 0,
+          subjectAverages: { Science: 0, Mathematics: 0, "Social Science": 0, English: 0, Hindi: 0 },
+          insights: [
+            { type: "info", text: "No students assigned to your classroom yet. Use the 'Add Student' tool to link student accounts." }
+          ]
+        }
+      });
+    }
+
+    // Aggregated metrics
+    const totalStudents = students.length;
+    const avgStreak = Math.round(students.reduce((acc, s) => acc + s.streak, 0) / totalStudents);
+    
+    let studentsWithQuizzes = 0;
+    let totalQuizScoreSum = 0;
+    students.forEach(s => {
+      const sLogs = db.getStudyLogs(s.id);
+      const quizLogs = sLogs.filter(l => l.activityType === 'quiz');
+      if (quizLogs.length > 0) {
+        studentsWithQuizzes++;
+        totalQuizScoreSum += quizLogs.reduce((acc, q) => acc + (q.score || 0), 0) / quizLogs.length;
+      }
+    });
+    const avgQuizScore = studentsWithQuizzes > 0 ? Math.round(totalQuizScoreSum / studentsWithQuizzes) : 0;
+
+    // Active today count (active study logs in the last 24h)
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    let activeTodayCount = 0;
+    students.forEach(s => {
+      const sLogs = db.getStudyLogs(s.id);
+      const activeToday = sLogs.some(l => new Date(l.timestamp) > oneDayAgo);
+      if (activeToday) activeTodayCount++;
+    });
+
+    // Subject averages
+    const subjects = ["Science", "Mathematics", "Social Science", "English", "Hindi"];
+    const subjectAverages = {};
+    subjects.forEach(sub => {
+      let subSum = 0;
+      students.forEach(s => {
+        subSum += s.subjectProgress[sub] || 0;
+      });
+      subjectAverages[sub] = Math.round(subSum / totalStudents);
+    });
+
+    // Generate classroom insights
+    const insights = [];
+    
+    // 1. Weak student warnings
+    const strugglingStudents = students.filter(s => s.avgMastery > 0 && s.avgMastery < 50);
+    if (strugglingStudents.length > 0) {
+      insights.push({
+        type: "danger",
+        text: `${strugglingStudents.length} student(s) (${strugglingStudents.map(s => s.name).join(', ')}) are averaging below 50% mastery. We recommend reviewing weak topics or simplifying upcoming units.`
+      });
+    }
+
+    // 2. Streaks warning
+    const zeroStreakStudents = students.filter(s => s.streak === 0);
+    if (zeroStreakStudents.length > 1) {
+      insights.push({
+        type: "warning",
+        text: `${zeroStreakStudents.length} students have 0-day study streaks. Recommend scheduling a quick clicker challenge to drive engagement.`
+      });
+    }
+
+    // 3. Subject mastery alert
+    let lowestSubject = "Science";
+    let lowestAvg = 100;
+    subjects.forEach(sub => {
+      if (subjectAverages[sub] < lowestAvg) {
+        lowestAvg = subjectAverages[sub];
+        lowestSubject = sub;
+      }
+    });
+    if (lowestAvg < 60 && lowestAvg > 0) {
+      insights.push({
+        type: "warning",
+        text: `Class average for ${lowestSubject} is currently low (${lowestAvg}%). Consider generating a simplified lesson plan with local metaphors.`
+      });
+    }
+
+    // 4. General positive insight
+    const highStreaks = students.filter(s => s.streak >= 3);
+    if (highStreaks.length > 0) {
+      insights.push({
+        type: "success",
+        text: `Great job! ${highStreaks.length} student(s) maintain a study streak of 3+ days, showing consistent daily learning.`
+      });
+    }
+
+    if (insights.length === 0) {
+      insights.push({
+        type: "info",
+        text: "All classroom indicators are nominal. Students are progressing at a steady pace."
+      });
+    }
+
+    res.json({
+      success: true,
+      analytics: {
+        totalStudents,
+        avgStreak,
+        avgQuizScore,
+        activeTodayCount,
+        subjectAverages,
+        insights
+      }
+    });
+  } catch (err) {
+    console.error("Failed to compile classroom analytics:", err);
+    res.status(500).json({ success: false, error: "Failed to compile classroom analytics" });
+  }
+});
+
+// 4. Assign student to teacher
+app.post('/api/teacher/assign', authenticateToken, requireTeacherRole, (req, res) => {
+  const { studentId } = req.body;
+  if (!studentId) {
+    return res.status(400).json({ success: false, error: "Missing required field studentId" });
+  }
+  try {
+    const result = db.assignStudent(req.user.id, studentId);
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    res.json(result);
+  } catch (err) {
+    console.error("Failed to assign student:", err);
+    res.status(500).json({ success: false, error: "Failed to assign student" });
+  }
+});
+
+// 5. Get registered students excluding current class
+app.get('/api/teacher/all-students-search', authenticateToken, requireTeacherRole, (req, res) => {
+  try {
+    const teacher = db.getUser(req.user.id);
+    const assignedIds = teacher.assignedStudents || [];
+    const allStudents = db.getAllStudents();
+    const unassignedStudents = allStudents.filter(s => !assignedIds.includes(s.id));
+    res.json({ success: true, students: unassignedStudents });
+  } catch (err) {
+    console.error("Failed to fetch search students:", err);
+    res.status(500).json({ success: false, error: "Failed to fetch search students" });
   }
 });
 

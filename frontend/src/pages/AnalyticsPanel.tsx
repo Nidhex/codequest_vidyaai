@@ -38,7 +38,7 @@ export const AnalyticsPanel: React.FC<AnalyticsPanelProps> = ({ onNavigate }) =>
     }
   }, [user, loadStats]);
 
-  if (!user) return null;
+  if (!user || user.role !== 'student') return null;
 
   if (loading) {
     return (

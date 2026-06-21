@@ -9,11 +9,15 @@ interface LandingPageProps {
 }
 
 export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
-  const { language } = useMainStore();
+  const { language, user } = useMainStore();
   const t = TRANSLATIONS[language] || TRANSLATIONS.en;
 
   const handleStart = () => {
-    onNavigate('dashboard');
+    if (user) {
+      onNavigate(user.role === 'teacher' ? 'teacher' : 'dashboard');
+    } else {
+      onNavigate('dashboard');
+    }
   };
 
   const handleVoiceDemo = () => {

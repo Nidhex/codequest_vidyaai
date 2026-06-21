@@ -60,7 +60,7 @@ function App() {
       }
     } else {
       // User is logged in. Public welcome pages should redirect to the dashboard
-      const publicWelcomePages = ['welcome', 'login', 'signup', 'forgot'];
+      const publicWelcomePages = ['landing', 'welcome', 'login', 'signup', 'forgot'];
       if (publicWelcomePages.includes(currentPage)) {
         if (user.role === 'teacher') {
           setCurrentPage('teacher');
@@ -69,11 +69,16 @@ function App() {
         }
       }
       
-      // Role protection guards: student cannot access teacher tools
+      // Role protection guards: student cannot access teacher tools, teacher cannot access student tools
       if (user.role === 'student') {
         const teacherPages = ['teacher', 'smartboard'];
         if (teacherPages.includes(currentPage)) {
           setCurrentPage('dashboard');
+        }
+      } else if (user.role === 'teacher') {
+        const studentPages = ['dashboard', 'feynman', 'debate', 'voice', 'practice', 'analytics'];
+        if (studentPages.includes(currentPage)) {
+          setCurrentPage('teacher');
         }
       }
     }

@@ -74,8 +74,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
   // Dynamic menu filtering based on role
   const filteredSections = SECTIONS.map(section => {
     const items = section.items.filter(item => {
-      if (user?.role === 'student' && (item.id === 'teacher' || item.id === 'smartboard')) {
-        return false;
+      if (user?.role === 'student') {
+        if (item.id === 'teacher' || item.id === 'smartboard') {
+          return false;
+        }
+      } else if (user?.role === 'teacher') {
+        const studentOnlyItems = ['dashboard', 'voice', 'feynman', 'debate', 'practice', 'analytics', 'leaderboard', 'landing'];
+        if (studentOnlyItems.includes(item.id)) {
+          return false;
+        }
       }
       return true;
     });

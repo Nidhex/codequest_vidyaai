@@ -23,7 +23,7 @@ export const PomodoroTimer: React.FC<PomodoroTimerProps> = ({ inline = false }) 
   const [sessions, setSessions] = useState(0);
   const [showXP, setShowXP] = useState(false);
   const [xpAmount, setXpAmount] = useState(0);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const audioRef = useRef<AudioContext | null>(null);
 
 

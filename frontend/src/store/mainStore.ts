@@ -11,6 +11,9 @@ export interface UserProfile {
   completedLessons: string[];
   streakLogs: number[];
   subjectProgress: Record<string, number>;
+  email?: string;
+  preferredLanguage?: string;
+  class?: string;
 }
 
 interface LessonState {
@@ -266,8 +269,11 @@ export const useMainStore = create<MainStore>((set, get) => ({
     set({ token: null, user: null, isAuthenticated: false });
     // Reset analytics store dynamically to avoid circular references
     try {
-      const { useAnalyticsStore } = require('./analyticsStore');
-      useAnalyticsStore.getState().resetStore();
+      import('./analyticsStore').then((mod) => {
+        mod.useAnalyticsStore.getState().resetStore();
+      }).catch((e) => {
+        console.warn("Could not dynamically reset analyticsStore:", e);
+      });
     } catch (e) {
       console.warn("Could not dynamically reset analyticsStore:", e);
     }

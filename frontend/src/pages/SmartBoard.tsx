@@ -888,7 +888,7 @@ export const SmartBoard: React.FC<SmartBoardProps> = ({ onNavigate }) => {
             </div>
 
             {/* FOLLOW-UP BAR (only when teaching) */}
-            {(isTeaching || boardState === 'teaching') && (
+            {isTeaching && (
               <div className="border-t border-cyber-border/20 px-5 py-4 bg-black/20 space-y-3">
                 <span className="text-[9px] text-cyber-text/40 uppercase tracking-widest font-mono">
                   💡 Ask a follow-up question to update the board

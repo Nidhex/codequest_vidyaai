@@ -317,6 +317,14 @@ function getData() {
             userDirty = true;
           }
         }
+        if (u.role === 'teacher') {
+          if (!u.assignedStudents) {
+            u.assignedStudents = u.id === 'teacher_1'
+              ? ["student_1", "user-8x4y8dckh", "user-4xt4hf1x6"]
+              : [];
+            userDirty = true;
+          }
+        }
       });
     }
 
@@ -490,5 +498,78 @@ module.exports = {
 
     saveData(db);
     return { log: newLog, user: user || null };
+  },
+  getStudentsByTeacher(teacherId) {
+    const db = getData();
+    const teacher = db.users.find(u => u.id === teacherId && u.role === 'teacher');
+    if (!teacher) return [];
+    
+    const assignedIds = teacher.assignedStudents || [];
+    return db.users
+      .filter(u => u.role === 'student' && assignedIds.includes(u.id))
+      .map(student => {
+        const studentLogs = db.studyLogs.filter(l => l.userId === student.id);
+        const totalStudyTime = studentLogs.reduce((acc, l) => acc + (l.timeSpent || 0), 0);
+        const lessonsCompletedCount = studentLogs.filter(l => l.activityType === 'lesson').length;
+        
+        // Calculate average subject mastery
+        const progressValues = Object.values(student.subjectProgress || {});
+        const avgMastery = progressValues.length > 0
+          ? Math.round(progressValues.reduce((a, b) => a + b, 0) / progressValues.length)
+          : 0;
+
+        // Last activity timestamp
+        let lastActivity = "";
+        if (studentLogs.length > 0) {
+          const sortedLogs = [...studentLogs].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+          lastActivity = sortedLogs[0].timestamp;
+        }
+
+        return {
+          id: student.id,
+          name: student.name,
+          email: student.email,
+          xp: student.xp || 0,
+          level: student.level || 1,
+          streak: student.streak || 0,
+          subjectProgress: student.subjectProgress || {},
+          avgMastery,
+          totalStudyTime,
+          lessonsCompletedCount,
+          lastActivity
+        };
+      });
+  },
+  assignStudent(teacherId, studentId) {
+    const db = getData();
+    const teacherIdx = db.users.findIndex(u => u.id === teacherId && u.role === 'teacher');
+    if (teacherIdx === -1) return { success: false, error: 'Teacher not found' };
+    
+    const studentExists = db.users.some(u => u.id === studentId && u.role === 'student');
+    if (!studentExists) return { success: false, error: 'Student not found' };
+
+    if (!db.users[teacherIdx].assignedStudents) {
+      db.users[teacherIdx].assignedStudents = [];
+    }
+
+    if (db.users[teacherIdx].assignedStudents.includes(studentId)) {
+      return { success: true, message: 'Student already assigned' };
+    }
+
+    db.users[teacherIdx].assignedStudents.push(studentId);
+    saveData(db);
+    return { success: true };
+  },
+  getAllStudents() {
+    const db = getData();
+    return db.users
+      .filter(u => u.role === 'student')
+      .map(s => ({
+        id: s.id,
+        name: s.name,
+        email: s.email,
+        level: s.level || 1,
+        xp: s.xp || 0
+      }));
   }
 };

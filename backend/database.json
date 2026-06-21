@@ -57,7 +57,12 @@
         }
       ],
       "email": "teacher@gmail.com",
-      "passwordHash": "$2b$10$eBaE3GwRBoJm5DOaCQBhYOHP8zCR5n3kZ9q0ddnO0XMZAEbrrVaqS"
+      "passwordHash": "$2b$10$eBaE3GwRBoJm5DOaCQBhYOHP8zCR5n3kZ9q0ddnO0XMZAEbrrVaqS",
+      "assignedStudents": [
+        "student_1",
+        "user-8x4y8dckh",
+        "user-4xt4hf1x6"
+      ]
     },
     {
       "id": "user-8x4y8dckh",
@@ -109,6 +114,74 @@
       ],
       "subjectProgress": {
         "Science": 24,
+        "Mathematics": 0,
+        "Social Science": 0,
+        "English": 0,
+        "Hindi": 0
+      }
+    },
+    {
+      "id": "user-4906pdqss",
+      "role": "teacher",
+      "name": "masterji",
+      "email": "vaishnavnidhish@gmail.com",
+      "passwordHash": "$2b$10$Gp6btVYKeTd41qr3tXTeqO3ExyVNIVnyuM9vz1fxh7NGm.MthPBH6",
+      "classLevels": [
+        8
+      ],
+      "lessonsPlanned": [],
+      "assignedStudents": []
+    },
+    {
+      "id": "user-mt148kq1s",
+      "role": "student",
+      "name": "Riya Sen",
+      "email": "riya@gmail.com",
+      "passwordHash": "$2b$10$1CkWxlORmjFx7Ke8nLDVUeQf4ecee5mB7.jp9tGUp5UIu03WTqeLy",
+      "class": "8",
+      "preferredLanguage": "en",
+      "xp": 0,
+      "level": 1,
+      "streak": 0,
+      "badges": [],
+      "completedLessons": [],
+      "streakLogs": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "subjectProgress": {
+        "Science": 0,
+        "Mathematics": 0,
+        "Social Science": 0,
+        "English": 0,
+        "Hindi": 0
+      }
+    },
+    {
+      "id": "user-3hnzweq30",
+      "role": "student",
+      "name": "Test Student",
+      "email": "student@test.com",
+      "passwordHash": "$2b$10$HAg4VXiFPG8u6HI7Us9lierBfrG64uU8R6tLFayF77fSRV9mvZk5.",
+      "class": "8",
+      "preferredLanguage": "en",
+      "xp": 0,
+      "level": 1,
+      "streak": 0,
+      "badges": [],
+      "completedLessons": [],
+      "streakLogs": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "subjectProgress": {
+        "Science": 0,
         "Mathematics": 0,
         "Social Science": 0,
         "English": 0,

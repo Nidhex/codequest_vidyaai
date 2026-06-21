@@ -10,7 +10,7 @@ export const StudentDashboard: React.FC = () => {
   const { user, language, classLevel, engagement } = useMainStore();
   const t = TRANSLATIONS[language] || TRANSLATIONS.en;
 
-  if (!user) return null;
+  if (!user || user.role !== 'student') return null;
 
   const levelProgress = ((user.xp % 400) / 400) * 100;
 
