@@ -128,3 +128,19 @@ body.high-contrast .glass-panel {
   border-bottom: 2px solid #fee440;
   transition: all 0.2s ease;
 }
+
+/* Custom slide-in keyframes for notifications */
+@keyframes slideIn {
+  from {
+    transform: translateX(120%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in {
+  animation: slideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}

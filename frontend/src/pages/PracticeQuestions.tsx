@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useMainStore } from '../store/mainStore';
+import { useAnalyticsStore } from '../store/analyticsStore';
 import { TRANSLATIONS, LANGUAGES } from '../store/translations';
 import { CURRICULUM_FALLBACK } from '../store/curriculumFallback';
 import {
@@ -40,7 +41,8 @@ interface Question {
 type BoardState = 'idle' | 'loading' | 'quiz';
 
 export const PracticeQuestions: React.FC<PracticeQuestionsProps> = ({ onNavigate }) => {
-  const { language, setLanguage, classLevel, setClassLevel, updateXP, engagement, updateEngagement, setUser } = useMainStore();
+  const { user, language, setLanguage, classLevel, setClassLevel, updateXP, engagement, updateEngagement, setUser } = useMainStore();
+  const { addActivityLog } = useAnalyticsStore();
 
   // Curriculum
   const [gradeLevel, setGradeLevel] = useState(classLevel);
@@ -493,45 +495,39 @@ export const PracticeQuestions: React.FC<PracticeQuestionsProps> = ({ onNavigate
   // ── Log Quiz Activity to Backend ────────────────────────────────
   useEffect(() => {
     if (boardState === 'quiz' && questions.length > 0 && answered.size === questions.length) {
-      const logQuizSession = async () => {
-        try {
-          let correctCount = 0;
-          questions.forEach((qItem, i) => {
-            const userSelection = selectedOptionsMap[i];
-            const isCorrect = qItem.type === 'fill'
-              ? userSelection?.trim().toLowerCase() === qItem.correctOption.trim().toLowerCase()
-              : userSelection?.[0] === qItem.correctOption;
-            if (isCorrect) correctCount++;
-          });
-          const scorePercent = Math.round((correctCount / questions.length) * 100);
-          
-          const response = await fetch('http://localhost:5000/api/learning/activity/log', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              userId: 'student_1',
-              activityType: 'quiz',
-              subject: subject || 'Science',
-              chapter: chapter || '',
-              topic: topicInput,
-              timeSpent: Math.round(questions.length * 1.5),
-              score: scorePercent,
-              totalQuestions: questions.length,
-              correctAnswers: correctCount,
-              wrongAnswers: questions.length - correctCount
-            })
-          });
-          const resData = await response.json();
-          if (resData.success && resData.user) {
-            setUser(resData.user);
-          }
-        } catch (err) {
-          console.error('Failed to log practice quiz activity:', err);
-        }
+      const logQuizSession = () => {
+        let correctCount = 0;
+        questions.forEach((qItem, i) => {
+          const userSelection = selectedOptionsMap[i];
+          const isCorrect = qItem.type === 'fill'
+            ? userSelection?.trim().toLowerCase() === qItem.correctOption.trim().toLowerCase()
+            : userSelection?.[0] === qItem.correctOption;
+          if (isCorrect) correctCount++;
+        });
+        const scorePercent = Math.round((correctCount / questions.length) * 100);
+        
+        // Extract dynamic focus time from global tracker
+        const focusMins = (window as any).getActiveFocusTime 
+          ? (window as any).getActiveFocusTime() 
+          : Math.round(questions.length * 1.5);
+
+        addActivityLog({
+          userId: user?.id || 'student_1',
+          activityType: 'quiz',
+          subject: subject || 'Science',
+          chapter: chapter || '',
+          topic: topicInput,
+          timeSpent: focusMins,
+          score: scorePercent,
+          totalQuestions: questions.length,
+          correctAnswers: correctCount,
+          wrongAnswers: questions.length - correctCount,
+          difficulty
+        });
       };
       logQuizSession();
     }
-  }, [answered, boardState, questions, selectedOptionsMap, subject, chapter, topicInput, setUser]);
+  }, [answered, boardState, questions, selectedOptionsMap, subject, chapter, topicInput, addActivityLog, difficulty]);
 
   const handleReset = () => {
     setQuestions([]);

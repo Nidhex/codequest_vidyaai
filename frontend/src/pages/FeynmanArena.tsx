@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useMainStore } from '../store/mainStore';
+import { useAnalyticsStore } from '../store/analyticsStore';
 import { TRANSLATIONS, LANGUAGES } from '../store/translations';
 import { CURRICULUM_FALLBACK } from '../store/curriculumFallback';
 import { AvatarTeacher } from '../components/AvatarTeacher';
@@ -14,7 +15,7 @@ interface FeynmanArenaProps {
 }
 
 export const FeynmanArena: React.FC<FeynmanArenaProps> = ({ onNavigate }) => {
-  const { feynman, language, setLanguage, classLevel, setClassLevel, addFeynmanMessage, setFeynmanScores, resetFeynman, updateXP, setUser } = useMainStore();
+  const { user, feynman, language, setLanguage, classLevel, setClassLevel, addFeynmanMessage, setFeynmanScores, resetFeynman, updateXP, setUser } = useMainStore();
   const t = TRANSLATIONS[language] || TRANSLATIONS.en;
 
   // Dynamic curriculum states
@@ -246,31 +247,17 @@ export const FeynmanArena: React.FC<FeynmanArenaProps> = ({ onNavigate }) => {
         updateXP(15);
         speakText(data.followUpQuestion);
 
-        // Log Feynman Socratic progress to Engagement AI
-        const logFeynmanSession = async () => {
-          try {
-            const logResponse = await fetch('http://localhost:5000/api/learning/activity/log', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                userId: 'student_1',
-                activityType: 'feynman',
-                subject: subject || 'Science',
-                chapter: chapter || '',
-                topic: topicInput,
-                timeSpent: 5,
-                score: data.score
-              })
-            });
-            const resData = await logResponse.json();
-            if (resData.success && resData.user) {
-              setUser(resData.user);
-            }
-          } catch (err) {
-            console.error("Failed to log feynman turn:", err);
-          }
-        };
-        logFeynmanSession();
+        // Log Feynman Socratic progress to Engagement AI via shared store
+        const focusMinutes = (window as any).getActiveFocusTime ? (window as any).getActiveFocusTime() : 5;
+        useAnalyticsStore.getState().addActivityLog({
+          userId: user?.id || 'student_1',
+          activityType: 'feynman',
+          subject: subject || 'Science',
+          chapter: chapter || '',
+          topic: topicInput,
+          timeSpent: focusMinutes,
+          score: data.score
+        }).catch(err => console.error("addActivityLog failed for Feynman:", err));
       }
     } catch (e) {
       console.error("Feynman response fail:", e);

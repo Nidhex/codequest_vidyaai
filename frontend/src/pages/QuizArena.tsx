@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useMainStore } from '../store/mainStore';
+import { useAnalyticsStore } from '../store/analyticsStore';
 import { TRANSLATIONS } from '../store/translations';
 import {
   ArrowLeft, CheckCircle2, XCircle, Volume2, Mic, MicOff,
@@ -70,7 +71,7 @@ export const QuizArena: React.FC<QuizArenaProps> = ({
   initialDifficulty, 
   onNavigate 
 }) => {
-  const { language, classLevel, updateXP, setUser } = useMainStore();
+  const { user, language, classLevel, updateXP, setUser } = useMainStore();
   const t = TRANSLATIONS[language] || TRANSLATIONS.en;
 
   // ── PRE-QUIZ SETUP STATE ──────────────────────────────────────────
@@ -222,35 +223,23 @@ export const QuizArena: React.FC<QuizArenaProps> = ({
         confetti({ particleCount: 200, spread: 90, origin: { y: 0.5 }, colors: ['#00f5d4', '#fee440', '#f15bb5'] });
       }
       
-      // Log quiz complete to Engagement AI backend
-      const logQuizCompletion = async () => {
-        try {
-          const passPercentVal = Math.round((score / questions.length) * 100);
-          const response = await fetch('http://localhost:5000/api/learning/activity/log', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              userId: 'student_1',
-              activityType: 'quiz',
-              subject: subject || 'Science',
-              chapter: chapter || '',
-              topic: topic,
-              timeSpent: Math.round(questions.length * 1.5),
-              score: passPercentVal,
-              totalQuestions: questions.length,
-              correctAnswers: score,
-              wrongAnswers: questions.length - score
-            })
-          });
-          const resData = await response.json();
-          if (resData.success && resData.user) {
-            setUser(resData.user);
-          }
-        } catch (err) {
-          console.error("Failed to log quiz complete:", err);
-        }
-      };
-      logQuizCompletion();
+      // Log quiz complete to Engagement AI backend via shared store
+      const focusMinutes = (window as any).getActiveFocusTime ? (window as any).getActiveFocusTime() : Math.round(questions.length * 1.5);
+      const passPercentVal = Math.round((score / questions.length) * 100);
+      
+      useAnalyticsStore.getState().addActivityLog({
+        userId: user?.id || 'student_1',
+        activityType: 'quiz',
+        subject: subject || 'Science',
+        chapter: chapter || '',
+        topic: topic,
+        timeSpent: focusMinutes,
+        score: passPercentVal,
+        totalQuestions: questions.length,
+        correctAnswers: score,
+        wrongAnswers: questions.length - score,
+        difficulty: difficulty
+      }).catch(err => console.error("addActivityLog failed:", err));
     }
   };
 

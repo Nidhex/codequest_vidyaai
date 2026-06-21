@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useMainStore } from '../store/mainStore';
+import { useAnalyticsStore } from '../store/analyticsStore';
 import { TRANSLATIONS } from '../store/translations';
 import { AvatarTeacher } from '../components/AvatarTeacher';
 import { 
@@ -1440,37 +1441,23 @@ const DebateArenaContent: React.FC<DebateArenaProps> = ({ onNavigate }) => {
                   window.speechSynthesis.cancel();
                   setShowEndReport(true);
 
-                  // Log debate completion to Engagement AI backend
-                  const logDebateSession = async () => {
-                    try {
-                      const scores = debate?.scores || {};
-                      const scoreValues = Object.values(scores).map(Number);
-                      const avgScore = scoreValues.length > 0
-                        ? Math.round(scoreValues.reduce((a, b) => a + b, 0) / scoreValues.length)
-                        : 80;
+                  // Log debate completion to Engagement AI backend via shared store
+                  const focusMinutes = (window as any).getActiveFocusTime ? (window as any).getActiveFocusTime() : 15;
+                  const scores = debate?.scores || {};
+                  const scoreValues = Object.values(scores).map(Number);
+                  const avgScore = scoreValues.length > 0
+                    ? Math.round(scoreValues.reduce((a, b) => a + b, 0) / scoreValues.length)
+                    : 80;
 
-                      const response = await fetch('http://localhost:5000/api/learning/activity/log', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                          userId: 'student_1',
-                          activityType: 'debate',
-                          subject: 'English',
-                          chapter: 'Debates',
-                          topic: debate.activeTopic,
-                          timeSpent: 15,
-                          score: avgScore
-                        })
-                      });
-                      const resData = await response.json();
-                      if (resData.success && resData.user) {
-                        setUser(resData.user);
-                      }
-                    } catch (err) {
-                      console.error("Failed to log debate session:", err);
-                    }
-                  };
-                  logDebateSession();
+                  useAnalyticsStore.getState().addActivityLog({
+                    userId: user?.id || 'student_1',
+                    activityType: 'debate',
+                    subject: 'English',
+                    chapter: 'Debates',
+                    topic: debate.activeTopic || 'General Debate',
+                    timeSpent: focusMinutes,
+                    score: avgScore
+                  }).catch(err => console.error("addActivityLog failed for Debate:", err));
                 }}
                 className="w-full py-3 rounded-xl bg-gradient-to-r from-cyber-purple to-cyber-pink hover:opacity-90 font-mono text-xs font-bold uppercase tracking-widest transition-all shadow-glow-purple cursor-pointer text-center text-white"
               >

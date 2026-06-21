@@ -4660,6 +4660,8 @@ Return ONLY a valid JSON array of objects (no markdown, no extra text, no code f
 // 📊 ENGAGEMENT AI REDESIGN: ACTIVITY LOGS & ANALYTICS
 // ----------------------------------------------------
 
+const analyticsCache = {};
+
 // 1. Log Study Activity
 app.post('/api/learning/activity/log', (req, res) => {
   const { userId, activityType, subject, chapter, topic, timeSpent, score, totalQuestions, correctAnswers, wrongAnswers } = req.body;
@@ -4682,6 +4684,9 @@ app.post('/api/learning/activity/log', (req, res) => {
       wrongAnswers: wrongAnswers !== undefined ? parseInt(wrongAnswers) : undefined
     });
 
+    // Invalidate compiled analytics cache on new log
+    delete analyticsCache[userId];
+
     res.json({ success: true, log: result.log, user: result.user });
   } catch (err) {
     console.error("Failed to add study log:", err);
@@ -4693,6 +4698,13 @@ app.post('/api/learning/activity/log', (req, res) => {
 app.get('/api/learning/activity/stats', (req, res) => {
   const userId = req.query.userId || "student_1";
   
+  // Check in-memory compiled cache first (valid for 5 minutes)
+  const now = Date.now();
+  if (analyticsCache[userId] && (now - analyticsCache[userId].timestamp < 5 * 60 * 1000)) {
+    console.log(`[Analytics Cache Hit] Returning cached stats for user: ${userId}`);
+    return res.json(analyticsCache[userId].compiledStats);
+  }
+
   try {
     const logs = db.getStudyLogs(userId);
     const user = db.getUser(userId);
@@ -4781,22 +4793,27 @@ app.get('/api/learning/activity/stats', (req, res) => {
 
     // E. Learning Heatmap (last 28 days)
     const heatmap = [];
-    const now = new Date();
     const dayMs = 24 * 60 * 60 * 1000;
     
     // Group logs by date string
     const logsByDate = {};
+    const logsMinutesByDate = {};
+    const logsXpByDate = {};
     logs.forEach(l => {
       const dateStr = new Date(l.timestamp).toISOString().split('T')[0];
       logsByDate[dateStr] = (logsByDate[dateStr] || 0) + 1;
+      logsMinutesByDate[dateStr] = (logsMinutesByDate[dateStr] || 0) + (l.timeSpent || 0);
+      logsXpByDate[dateStr] = (logsXpByDate[dateStr] || 0) + (l.xpEarned || 30);
     });
 
     for (let i = 27; i >= 0; i--) {
-      const d = new Date(now.getTime() - i * dayMs);
+      const d = new Date(now - i * dayMs);
       const dateStr = d.toISOString().split('T')[0];
       heatmap.push({
         date: dateStr,
-        count: logsByDate[dateStr] || 0
+        count: logsByDate[dateStr] || 0,
+        minutes: Math.round(logsMinutesByDate[dateStr] || 0),
+        xp: logsXpByDate[dateStr] || 0
       });
     }
 
@@ -4826,8 +4843,36 @@ app.get('/api/learning/activity/stats', (req, res) => {
 
     // G. AI Recommendations Engine
     const recommendations = [];
+    
+    // 1. Check for improvement trends in history
+    const quizScoresBySubject = {};
+    quizLogs.forEach(q => {
+      if (!quizScoresBySubject[q.subject]) quizScoresBySubject[q.subject] = [];
+      quizScoresBySubject[q.subject].push(q.score);
+    });
+
+    Object.keys(quizScoresBySubject).forEach(subj => {
+      const scores = quizScoresBySubject[subj];
+      if (scores.length >= 2) {
+        const lastScore = scores[scores.length - 1];
+        const prevScore = scores[scores.length - 2];
+        if (lastScore > prevScore) {
+          const improvement = Math.round(lastScore - prevScore);
+          recommendations.push({
+            type: "insight",
+            title: `${subj} Efficiency Boost!`,
+            description: `Your ${subj} scores rose by ${improvement}% after completing corresponding study units.`,
+            actionLabel: "Keep it Up",
+            subject: subj,
+            topic: ""
+          });
+        }
+      }
+    });
+
+    // 2. Check for weak topics that need revision
     if (weakTopics.length > 0) {
-      weakTopics.forEach(wt => {
+      weakTopics.slice(0, 2).forEach(wt => {
         recommendations.push({
           type: "revision",
           title: `Needs Practice: ${wt.topic}`,
@@ -4839,26 +4884,33 @@ app.get('/api/learning/activity/stats', (req, res) => {
       });
     }
 
-    // Always add standard high-value suggestions
-    recommendations.push({
-      type: "quiz",
-      title: "Daily Practice Challenge",
-      description: "Solve a quick 5-question adaptive quiz on your current subject to maintain your study streak.",
-      actionLabel: "Take Quiz",
-      subject: "Science",
-      topic: "Crop Production"
-    });
+    // 3. Dynamic Feynman / Socratic suggestions based on active subjects
+    const completedLessonLogs = logs.filter(l => l.activityType === 'lesson');
+    if (completedLessonLogs.length > 0) {
+      const lastLesson = completedLessonLogs[completedLessonLogs.length - 1];
+      recommendations.push({
+        type: "feynman",
+        title: `Deepen: ${lastLesson.topic}`,
+        description: `Use Feynman Mode to explain "${lastLesson.topic}" in your own words. Teaching others is the best way to verify absolute clarity!`,
+        actionLabel: "Start Feynman",
+        subject: lastLesson.subject,
+        topic: lastLesson.topic
+      });
+    }
 
-    recommendations.push({
-      type: "feynman",
-      title: "Explain to Vidya AI",
-      description: "Use Feynman Mode to explain the structure of the Atom in your own words. Teaching others is the best way to master a topic!",
-      actionLabel: "Start Feynman Mode",
-      subject: "Science",
-      topic: "Structure of the Atom"
-    });
+    // 4. Default dynamic challenge fallback
+    if (recommendations.length < 3) {
+      recommendations.push({
+        type: "quiz",
+        title: "Daily Practice Challenge",
+        description: "Solve a quick 5-question adaptive quiz on your current subject to maintain your study streak.",
+        actionLabel: "Take Quiz",
+        subject: "Science",
+        topic: "Crop Production"
+      });
+    }
 
-    res.json({
+    const responsePayload = {
       success: true,
       stats: {
         userId,
@@ -4885,7 +4937,15 @@ app.get('/api/learning/activity/stats', (req, res) => {
         },
         recommendations
       }
-    });
+    };
+
+    // Cache the compiled analytics response
+    analyticsCache[userId] = {
+      timestamp: Date.now(),
+      compiledStats: responsePayload
+    };
+
+    res.json(responsePayload);
 
   } catch (err) {
     console.error("Failed to compile analytics:", err);

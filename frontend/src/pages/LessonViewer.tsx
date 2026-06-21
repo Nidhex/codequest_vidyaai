@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useMainStore } from '../store/mainStore';
+import { useAnalyticsStore } from '../store/analyticsStore';
 import { TRANSLATIONS, LANGUAGES } from '../store/translations';
 import { CURRICULUM_FALLBACK } from '../store/curriculumFallback';
 import { AvatarTeacher } from '../components/AvatarTeacher';
@@ -17,7 +18,7 @@ interface LessonViewerProps {
 export const LessonViewer: React.FC<LessonViewerProps> = ({ onNavigate, onStartQuiz }) => {
   const { 
     language, setLanguage, classLevel, setClassLevel, region, 
-    lesson, setLesson, updateXP, setUser 
+    user, lesson, setLesson, updateXP, setUser 
   } = useMainStore();
   const t = TRANSLATIONS[language] || TRANSLATIONS.en;  // Dynamic curriculum states
   const [gradeLevel, setGradeLevel] = useState(classLevel);
@@ -293,30 +294,16 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ onNavigate, onStartQ
       colors: ['#00f2fe', '#9b5de5', '#fee440']
     });
 
-    // Log lesson study session to Engagement AI backend
-    const logLessonActivity = async () => {
-      try {
-        const response = await fetch('http://localhost:5000/api/learning/activity/log', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId: 'student_1',
-            activityType: 'lesson',
-            subject: subject || 'Science',
-            chapter: chapter || '',
-            topic: lesson?.title || topicInput || 'General Lesson',
-            timeSpent: 15
-          })
-        });
-        const resData = await response.json();
-        if (resData.success && resData.user) {
-          setUser(resData.user);
-        }
-      } catch (err) {
-        console.error("Failed to log lesson activity:", err);
-      }
-    };
-    logLessonActivity();
+    // Log lesson study session to Engagement AI backend via shared store
+    const focusMinutes = (window as any).getActiveFocusTime ? (window as any).getActiveFocusTime() : 15;
+    useAnalyticsStore.getState().addActivityLog({
+      userId: user?.id || 'student_1',
+      activityType: 'lesson',
+      subject: subject || 'Science',
+      chapter: chapter || '',
+      topic: lesson?.title || topicInput || 'General Lesson',
+      timeSpent: focusMinutes
+    }).catch(err => console.error("addActivityLog failed for Lesson:", err));
   };
 
   return (

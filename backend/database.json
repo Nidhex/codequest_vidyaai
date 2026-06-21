@@ -21,13 +21,14 @@
         1,
         1,
         1,
-        1
+        0
       ],
       "subjectProgress": {
-        "Science": 75,
-        "History": 40,
-        "Geography": 60,
-        "Mathematics": 25
+        "Science": 57,
+        "Mathematics": 69,
+        "Social Science": 39,
+        "English": 57,
+        "Hindi": 55
       }
     },
     {
@@ -109,5 +110,116 @@
       86,
       91
     ]
-  }
+  },
+  "studyLogs": [
+    {
+      "id": "log-seed-1",
+      "userId": "student_1",
+      "activityType": "quiz",
+      "subject": "Science",
+      "chapter": "Crop Production and Management",
+      "topic": "Agricultural Implements",
+      "timestamp": "2026-06-02T11:17:38.663Z",
+      "timeSpent": 12,
+      "score": 80,
+      "totalQuestions": 5,
+      "correctAnswers": 4,
+      "wrongAnswers": 1
+    },
+    {
+      "id": "log-seed-2",
+      "userId": "student_1",
+      "activityType": "lesson",
+      "subject": "Mathematics",
+      "chapter": "Fractions",
+      "topic": "Fractions and Parts of Whole",
+      "timestamp": "2026-06-06T11:17:38.663Z",
+      "timeSpent": 20
+    },
+    {
+      "id": "log-seed-3",
+      "userId": "student_1",
+      "activityType": "feynman",
+      "subject": "Science",
+      "chapter": "Structure of the Atom",
+      "topic": "Bohr Model of Atom",
+      "timestamp": "2026-06-09T11:17:38.663Z",
+      "timeSpent": 18,
+      "score": 85
+    },
+    {
+      "id": "log-seed-4",
+      "userId": "student_1",
+      "activityType": "debate",
+      "subject": "English",
+      "chapter": "Debates",
+      "topic": "Artificial Intelligence in Agriculture",
+      "timestamp": "2026-06-13T11:17:38.663Z",
+      "timeSpent": 15,
+      "score": 82
+    },
+    {
+      "id": "log-seed-5",
+      "userId": "student_1",
+      "activityType": "quiz",
+      "subject": "Science",
+      "chapter": "Crop Production and Management",
+      "topic": "Photosynthesis",
+      "timestamp": "2026-06-16T11:17:38.663Z",
+      "timeSpent": 10,
+      "score": 60,
+      "totalQuestions": 5,
+      "correctAnswers": 3,
+      "wrongAnswers": 2
+    },
+    {
+      "id": "log-seed-6",
+      "userId": "student_1",
+      "activityType": "lesson",
+      "subject": "Hindi",
+      "chapter": "Hindi Literature",
+      "topic": "Hindi scripts vocabulary",
+      "timestamp": "2026-06-17T11:17:38.663Z",
+      "timeSpent": 25
+    },
+    {
+      "id": "log-seed-7",
+      "userId": "student_1",
+      "activityType": "quiz",
+      "subject": "Mathematics",
+      "chapter": "Fractions",
+      "topic": "Equivalent Fractions",
+      "timestamp": "2026-06-18T11:17:38.663Z",
+      "timeSpent": 15,
+      "score": 90,
+      "totalQuestions": 10,
+      "correctAnswers": 9,
+      "wrongAnswers": 1
+    },
+    {
+      "id": "log-seed-8",
+      "userId": "student_1",
+      "activityType": "feynman",
+      "subject": "Social Science",
+      "chapter": "History",
+      "topic": "Industrial Revolution",
+      "timestamp": "2026-06-19T11:17:38.663Z",
+      "timeSpent": 14,
+      "score": 55
+    },
+    {
+      "id": "log-seed-9",
+      "userId": "student_1",
+      "activityType": "quiz",
+      "subject": "Science",
+      "chapter": "Crop Production and Management",
+      "topic": "Agricultural Implements",
+      "timestamp": "2026-06-20T11:17:38.663Z",
+      "timeSpent": 15,
+      "score": 100,
+      "totalQuestions": 10,
+      "correctAnswers": 10,
+      "wrongAnswers": 0
+    }
+  ]
 }
