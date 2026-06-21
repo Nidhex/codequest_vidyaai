@@ -64,6 +64,8 @@ interface AccessibilityState {
 
 interface MainStore {
   user: UserProfile | null;
+  token: string | null;
+  isAuthenticated: boolean;
   language: string;
   classLevel: number;
   region: string;
@@ -74,7 +76,7 @@ interface MainStore {
   accessibility: AccessibilityState;
   
   // Actions
-  setUser: (user: UserProfile) => void;
+  setUser: (user: UserProfile | null) => void;
   updateXP: (amount: number) => void;
   setLanguage: (lang: string) => void;
   setClassLevel: (level: number) => void;
@@ -90,26 +92,17 @@ interface MainStore {
   resetDebate: () => void;
   updateEngagement: (score: number, ear: number, isDrowsy: boolean) => void;
   toggleAccessibility: (key: keyof AccessibilityState) => void;
+
+  // Auth Actions
+  login: (token: string, user: UserProfile) => void;
+  logout: () => void;
+  checkSession: () => Promise<boolean>;
 }
 
-export const useMainStore = create<MainStore>((set) => ({
-  user: {
-    id: "student_1",
-    role: "student",
-    name: "Aarav Sharma",
-    streak: 5,
-    xp: 1250,
-    level: 4,
-    badges: ["Language Pioneer", "Feynman Scholar", "Debate Champion"],
-    completedLessons: ["photosynthesis-1", "solar-system-1"],
-    streakLogs: [1, 1, 1, 1, 1],
-    subjectProgress: {
-      Science: 75,
-      History: 40,
-      Geography: 60,
-      Mathematics: 25
-    }
-  },
+export const useMainStore = create<MainStore>((set, get) => ({
+  user: null,
+  token: localStorage.getItem('token'),
+  isAuthenticated: !!localStorage.getItem('token'),
   language: 'en',
   classLevel: 8,
   region: 'Punjab',
@@ -255,5 +248,63 @@ export const useMainStore = create<MainStore>((set) => ({
         [key]: newVal
       }
     };
-  })
+  }),
+
+  // Auth actions
+  login: (token, user) => {
+    localStorage.setItem('token', token);
+    set({ token, user, isAuthenticated: true });
+    if (user.preferredLanguage) {
+      set({ language: user.preferredLanguage });
+    }
+    if (user.role === 'student' && (user as any).class) {
+      set({ classLevel: parseInt((user as any).class) || 8 });
+    }
+  },
+  logout: () => {
+    localStorage.removeItem('token');
+    set({ token: null, user: null, isAuthenticated: false });
+    // Reset analytics store dynamically to avoid circular references
+    try {
+      const { useAnalyticsStore } = require('./analyticsStore');
+      useAnalyticsStore.getState().resetStore();
+    } catch (e) {
+      console.warn("Could not dynamically reset analyticsStore:", e);
+    }
+  },
+  checkSession: async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      set({ token: null, user: null, isAuthenticated: false });
+      return false;
+    }
+    try {
+      const res = await fetch('http://localhost:5000/api/auth/me', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!res.ok) {
+        throw new Error("Token invalid");
+      }
+      const data = await res.json();
+      if (data.success && data.user) {
+        set({ token, user: data.user, isAuthenticated: true });
+        if (data.user.preferredLanguage) {
+          set({ language: data.user.preferredLanguage });
+        }
+        if (data.user.role === 'student' && data.user.class) {
+          set({ classLevel: parseInt(data.user.class) || 8 });
+        }
+        return true;
+      } else {
+        localStorage.removeItem('token');
+        set({ token: null, user: null, isAuthenticated: false });
+        return false;
+      }
+    } catch (err) {
+      console.error("Session check failed, logging out:", err);
+      localStorage.removeItem('token');
+      set({ token: null, user: null, isAuthenticated: false });
+      return false;
+    }
+  }
 }));

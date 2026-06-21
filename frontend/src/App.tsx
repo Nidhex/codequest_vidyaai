@@ -19,11 +19,28 @@ import { PomodoroTimer } from './components/PomodoroTimer';
 import { useAnalyticsStore } from './store/analyticsStore';
 import { useMainStore } from './store/mainStore';
 
+// Authentication Pages
+import { WelcomePage } from './pages/WelcomePage';
+import { LoginPage } from './pages/LoginPage';
+import { SignUpPage } from './pages/SignUpPage';
+import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
+import { StudentProfilePage } from './pages/StudentProfilePage';
+
 function App() {
   const [currentPage, setCurrentPage] = useState<string>('landing');
   
-  const { user } = useMainStore();
+  const { user, checkSession } = useMainStore();
   const { notifications, removeNotification, loadStats } = useAnalyticsStore();
+  const [sessionChecking, setSessionChecking] = useState(true);
+
+  // Check session on mount
+  useEffect(() => {
+    const initSession = async () => {
+      await checkSession();
+      setSessionChecking(false);
+    };
+    initSession();
+  }, [checkSession]);
 
   // Load telemetry stats on startup
   useEffect(() => {
@@ -31,6 +48,36 @@ function App() {
       loadStats(user.id);
     }
   }, [user, loadStats]);
+
+  // Protection & Route Guarding
+  useEffect(() => {
+    if (sessionChecking) return;
+    
+    const publicPages = ['landing', 'welcome', 'login', 'signup', 'forgot'];
+    if (!user) {
+      if (!publicPages.includes(currentPage)) {
+        setCurrentPage('welcome');
+      }
+    } else {
+      // User is logged in. Public welcome pages should redirect to the dashboard
+      const publicWelcomePages = ['welcome', 'login', 'signup', 'forgot'];
+      if (publicWelcomePages.includes(currentPage)) {
+        if (user.role === 'teacher') {
+          setCurrentPage('teacher');
+        } else {
+          setCurrentPage('dashboard');
+        }
+      }
+      
+      // Role protection guards: student cannot access teacher tools
+      if (user.role === 'student') {
+        const teacherPages = ['teacher', 'smartboard'];
+        if (teacherPages.includes(currentPage)) {
+          setCurrentPage('dashboard');
+        }
+      }
+    }
+  }, [user, currentPage, sessionChecking]);
 
   // Focus tracking state refs
   const lastActiveTime = useRef<number>(Date.now());
@@ -105,10 +152,29 @@ function App() {
     setCurrentPage('quiz');
   };
 
+  if (sessionChecking) {
+    return (
+      <div className="w-full min-h-screen flex flex-col items-center justify-center space-y-4 bg-[#03001e] text-cyan-400 font-mono text-xs">
+        <div className="w-12 h-12 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin"></div>
+        <p className="animate-pulse uppercase">Synchronizing cognitive telemetry state...</p>
+      </div>
+    );
+  }
+
   const renderPage = () => {
     switch (currentPage) {
       case 'landing':
         return <LandingPage onNavigate={setCurrentPage} />;
+      case 'welcome':
+        return <WelcomePage onNavigate={setCurrentPage} />;
+      case 'login':
+        return <LoginPage onNavigate={setCurrentPage} />;
+      case 'signup':
+        return <SignUpPage onNavigate={setCurrentPage} />;
+      case 'forgot':
+        return <ForgotPasswordPage onNavigate={setCurrentPage} />;
+      case 'profile':
+        return <StudentProfilePage onNavigate={setCurrentPage} />;
       case 'dashboard':
         return <StudentDashboard />;
       case 'quiz':
@@ -147,8 +213,9 @@ function App() {
     }
   };
 
-  // Standalone layout for cinematic Landing Page
-  if (currentPage === 'landing') {
+  // Standalone layout for public entry pages
+  const publicWelcomePages = ['landing', 'welcome', 'login', 'signup', 'forgot'];
+  if (publicWelcomePages.includes(currentPage)) {
     return (
       <div className="w-full min-h-screen selection:bg-cyber-purple selection:text-white">
         {renderPage()}

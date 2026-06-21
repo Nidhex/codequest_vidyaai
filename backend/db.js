@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const bcrypt = require('bcryptjs');
 
 const DB_FILE = path.join(__dirname, 'database.json');
 
@@ -278,9 +279,30 @@ function getData() {
       data.studyLogs = getSeedLogs();
       dirty = true;
     }
+    
+    // Seed default credentials for Aarav Sharma & Dr Priyamvada Sen if missing
+    let userDirty = false;
+    if (Array.isArray(data.users)) {
+      data.users.forEach(u => {
+        if (!u.email) {
+          if (u.id === 'student_1') {
+            u.email = 'aarav@gmail.com';
+            u.passwordHash = bcrypt.hashSync('password123', 10);
+            userDirty = true;
+          } else if (u.id === 'teacher_1') {
+            u.email = 'teacher@gmail.com';
+            u.passwordHash = bcrypt.hashSync('password123', 10);
+            userDirty = true;
+          }
+        }
+      });
+    }
+
     // Perform sync updates for student_1 profile based on seed logs
     if (dirty) {
       recalculateUserStats("student_1", data);
+    }
+    if (dirty || userDirty) {
       fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf8');
     }
     return data;
@@ -304,6 +326,54 @@ module.exports = {
   getUser(id) {
     const db = getData();
     return db.users.find(u => u.id === id);
+  },
+  getUserByEmail(email) {
+    const db = getData();
+    return db.users.find(u => u.email && u.email.toLowerCase() === email.toLowerCase());
+  },
+  createUser(userPayload) {
+    const db = getData();
+    const id = "user-" + Math.random().toString(36).substr(2, 9);
+    
+    let newUser;
+    if (userPayload.role === 'teacher') {
+      newUser = {
+        id,
+        role: 'teacher',
+        name: userPayload.name,
+        email: userPayload.email,
+        passwordHash: userPayload.passwordHash,
+        classLevels: [userPayload.classLevel || 8],
+        lessonsPlanned: []
+      };
+    } else {
+      newUser = {
+        id,
+        role: 'student',
+        name: userPayload.name,
+        email: userPayload.email,
+        passwordHash: userPayload.passwordHash,
+        class: String(userPayload.classLevel || 8),
+        preferredLanguage: userPayload.preferredLanguage || 'English',
+        xp: 0,
+        level: 1,
+        streak: 0,
+        badges: [],
+        completedLessons: [],
+        streakLogs: [0, 0, 0, 0, 0],
+        subjectProgress: {
+          Science: 10,
+          Mathematics: 10,
+          "Social Science": 10,
+          English: 10,
+          Hindi: 10
+        }
+      };
+    }
+    
+    db.users.push(newUser);
+    saveData(db);
+    return newUser;
   },
   updateUser(id, updates) {
     const db = getData();

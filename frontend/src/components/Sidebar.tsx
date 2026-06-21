@@ -1,9 +1,10 @@
 import React from 'react';
 import { 
   Home, LayoutDashboard, Volume2, Brain, 
-  MessageSquare, User, Eye, 
+  MessageSquare, User, Eye, LogOut,
   Trophy, Settings, ChevronLeft, ChevronRight, Sparkles, Presentation, ClipboardList
 } from 'lucide-react';
+import { useMainStore } from '../store/mainStore';
 
 interface SidebarProps {
   currentPage: string;
@@ -29,6 +30,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   collapsed,
   setCollapsed
 }) => {
+  const { user, logout } = useMainStore();
 
   const SECTIONS: MenuSection[] = [
     {
@@ -69,6 +71,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
     }
   ];
 
+  // Dynamic menu filtering based on role
+  const filteredSections = SECTIONS.map(section => {
+    const items = section.items.filter(item => {
+      if (user?.role === 'student' && (item.id === 'teacher' || item.id === 'smartboard')) {
+        return false;
+      }
+      return true;
+    });
+    return { ...section, items };
+  }).filter(section => section.items.length > 0);
+
+  const handleLogout = () => {
+    logout();
+    onNavigate('welcome');
+  };
+
   return (
     <aside 
       className={`glass-panel border-r border-cyber-border/40 h-screen transition-all duration-300 flex flex-col justify-between z-40 fixed left-0 top-0 bg-cyber-bg/90 ${
@@ -101,8 +119,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       {/* Nav List */}
-      <div className="flex-1 overflow-y-auto px-3 py-4 space-y-4 select-none">
-        {SECTIONS.map((section, idx) => (
+      <div className="flex-1 overflow-y-auto px-3 py-4 space-y-4 select-none font-sans">
+        {filteredSections.map((section, idx) => (
           <div key={idx} className="flex flex-col space-y-1">
             {!collapsed && (
               <span className="text-[9px] uppercase tracking-widest text-cyber-text/40 font-mono pl-3 mb-1 block">
@@ -134,10 +152,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
         ))}
       </div>
 
-      {/* Footer Profile card */}
-      <div className="p-3 border-t border-cyber-border/20">
+      {/* Footer Profile card & Logout */}
+      <div className="p-3 border-t border-cyber-border/20 space-y-2">
         <button
-          onClick={() => onNavigate('settings')}
+          onClick={() => onNavigate('profile')}
           className={`w-full flex items-center rounded-xl p-2 bg-black/40 border border-cyber-border/10 hover:border-cyber-blue transition-colors cursor-pointer ${
             collapsed ? 'justify-center' : 'space-x-3'
           }`}
@@ -147,10 +165,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
           {!collapsed && (
             <div className="text-left truncate font-mono">
-              <div className="text-[10px] font-bold text-white leading-tight">Aarav Sharma</div>
-              <span className="text-[8px] text-cyber-cyan font-bold tracking-widest uppercase">Student Level 4</span>
+              <div className="text-[10px] font-bold text-white leading-tight">{user?.name || "Anonymous"}</div>
+              <span className="text-[8px] text-cyber-cyan font-bold tracking-widest uppercase">
+                {user?.role === 'teacher' ? 'Teacher Node' : `Student Level ${user?.level || 1}`}
+              </span>
             </div>
           )}
+        </button>
+
+        <button
+          onClick={handleLogout}
+          className={`w-full flex items-center justify-center rounded-xl p-2 bg-red-950/20 hover:bg-red-950/40 border border-red-500/20 hover:border-red-500/40 text-red-400 font-mono text-xs cursor-pointer transition-colors ${
+            collapsed ? 'justify-center' : 'space-x-2'
+          }`}
+          title="Logout Account"
+        >
+          <LogOut className="w-4 h-4" />
+          {!collapsed && <span>LOG OUT</span>}
         </button>
       </div>
     </aside>

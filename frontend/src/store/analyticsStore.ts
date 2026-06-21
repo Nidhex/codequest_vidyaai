@@ -97,6 +97,7 @@ interface AnalyticsStore {
   addActivityLog: (log: Omit<StudyLog, 'id' | 'timestamp' | 'xpEarned'> & { difficulty?: string }) => Promise<void>;
   addNotification: (text: string, type: ToastNotification['type']) => void;
   removeNotification: (id: string) => void;
+  resetStore: () => void;
 }
 
 const DEFAULT_ACHIEVEMENTS: Achievement[] = [
@@ -138,6 +139,23 @@ export const useAnalyticsStore = create<AnalyticsStore>((set, get) => ({
     set(state => ({
       notifications: state.notifications.filter(n => n.id !== id)
     }));
+  },
+
+  resetStore: () => {
+    set({
+      studyLogs: [],
+      subjectMastery: { Science: 10, Mathematics: 10, 'Social Science': 10, English: 10, Hindi: 10 },
+      xp: 0,
+      level: 1,
+      streak: 0,
+      weakTopics: [],
+      heatmapData: [],
+      quizStats: { avgQuizScore: 0, quizAccuracy: 0, hardestSubject: 'None', easiestSubject: 'None', recentQuizHistory: [] },
+      focusStats: { avgSessionDuration: 15, peakFocusHour: '10:00 AM', attentionHistory: [85, 88, 78, 88, 84, 86, 91] },
+      achievements: DEFAULT_ACHIEVEMENTS.map(ach => ({ ...ach, unlocked: false, unlockedAt: undefined })),
+      overallLearningScore: 10,
+      rankLabel: 'Beginner Learner'
+    });
   },
 
   loadStats: async (userId) => {

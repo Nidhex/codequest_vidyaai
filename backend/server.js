@@ -6,8 +6,37 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const dotenv = require('dotenv');
 const db = require('./db');
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 
 dotenv.config();
+
+const JWT_SECRET = process.env.JWT_SECRET || 'vidya-ai-super-secret-key-2026';
+
+function authenticateToken(req, res, next) {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+  
+  if (!token) {
+    return res.status(401).json({ success: false, error: "Access token missing or invalid session." });
+  }
+
+  jwt.verify(token, JWT_SECRET, (err, decoded) => {
+    if (err) {
+      return res.status(403).json({ success: false, error: "Session expired or invalid token. Please log in again." });
+    }
+    req.user = decoded;
+    next();
+  });
+}
+
+function requireTeacherRole(req, res, next) {
+  if (req.user && req.user.role === 'teacher') {
+    next();
+  } else {
+    res.status(403).json({ success: false, error: "Access denied. Only teachers are authorized to access this panel." });
+  }
+}
 
 const app = express();
 const server = http.createServer(app);
@@ -297,10 +326,144 @@ async function queryLLMChain(prompt, systemInstruction = "", timeoutMs = 5000) {
 // 🛣 EXPRESS ROUTING API ENDPOINTS
 // ----------------------------------------------------
 
-// 1. Profile Endpoint
-app.get('/api/auth/profile', (req, res) => {
-  const profile = db.getUser("student_1");
-  res.json({ success: true, profile });
+// 1. Authentication Endpoints
+
+// POST /api/auth/signup
+app.post('/api/auth/signup', (req, res) => {
+  const { name, email, password, role, classLevel, preferredLanguage } = req.body;
+  if (!name || !email || !password) {
+    return res.status(400).json({ success: false, error: "Name, email, and password are required." });
+  }
+
+  try {
+    const existingUser = db.getUserByEmail(email);
+    if (existingUser) {
+      return res.status(400).json({ success: false, error: "An account with this email already exists." });
+    }
+
+    const passwordHash = bcrypt.hashSync(password, 10);
+    const newUserPayload = {
+      name,
+      email,
+      passwordHash,
+      role: role || 'student',
+      classLevel: parseInt(classLevel) || 8,
+      preferredLanguage: preferredLanguage || 'English'
+    };
+
+    const newUser = db.createUser(newUserPayload);
+    
+    // Generate JWT token
+    const token = jwt.sign(
+      { id: newUser.id, email: newUser.email, role: newUser.role },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    // Don't return password hash
+    const { passwordHash: _, ...userWithoutPassword } = newUser;
+
+    res.status(201).json({
+      success: true,
+      message: "Account created successfully!",
+      token,
+      user: userWithoutPassword
+    });
+  } catch (err) {
+    console.error("Signup failed:", err);
+    res.status(500).json({ success: false, error: "Signup failed due to internal server error." });
+  }
+});
+
+// POST /api/auth/login
+app.post('/api/auth/login', (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) {
+    return res.status(400).json({ success: false, error: "Email and password are required." });
+  }
+
+  try {
+    const user = db.getUserByEmail(email);
+    if (!user) {
+      return res.status(401).json({ success: false, error: "Invalid email or password." });
+    }
+
+    const isPasswordValid = bcrypt.compareSync(password, user.passwordHash);
+    if (!isPasswordValid) {
+      return res.status(401).json({ success: false, error: "Invalid email or password." });
+    }
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { id: user.id, email: user.email, role: user.role },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    const { passwordHash: _, ...userWithoutPassword } = user;
+
+    res.json({
+      success: true,
+      message: "Logged in successfully!",
+      token,
+      user: userWithoutPassword
+    });
+  } catch (err) {
+    console.error("Login failed:", err);
+    res.status(500).json({ success: false, error: "Login failed due to internal server error." });
+  }
+});
+
+// POST /api/auth/logout
+app.post('/api/auth/logout', (req, res) => {
+  res.json({ success: true, message: "Logged out successfully!" });
+});
+
+// GET /api/auth/me
+app.get('/api/auth/me', authenticateToken, (req, res) => {
+  try {
+    const user = db.getUser(req.user.id);
+    if (!user) {
+      return res.status(404).json({ success: false, error: "User not found." });
+    }
+    const { passwordHash: _, ...userWithoutPassword } = user;
+    res.json({ success: true, user: userWithoutPassword });
+  } catch (err) {
+    res.status(500).json({ success: false, error: "Failed to retrieve user profile." });
+  }
+});
+
+// Profile Endpoint (authenticated, for backwards compatibility)
+app.get('/api/auth/profile', authenticateToken, (req, res) => {
+  try {
+    const profile = db.getUser(req.user.id);
+    if (!profile) {
+      return res.status(404).json({ success: false, error: "Profile not found." });
+    }
+    res.json({ success: true, profile });
+  } catch (err) {
+    res.status(500).json({ success: false, error: "Failed to get profile" });
+  }
+});
+
+// POST /api/auth/profile/update
+app.post('/api/auth/profile/update', authenticateToken, (req, res) => {
+  const { name, classLevel, preferredLanguage } = req.body;
+  const updates = {};
+  if (name) updates.name = name;
+  if (classLevel) updates.class = String(classLevel);
+  if (preferredLanguage) updates.preferredLanguage = preferredLanguage;
+
+  try {
+    const updatedUser = db.updateUser(req.user.id, updates);
+    if (!updatedUser) {
+      return res.status(404).json({ success: false, error: "User not found." });
+    }
+    const { passwordHash: _, ...userWithoutPassword } = updatedUser;
+    res.json({ success: true, user: userWithoutPassword });
+  } catch (err) {
+    res.status(500).json({ success: false, error: "Failed to update profile." });
+  }
 });
 
 // Curriculum Endpoint
@@ -536,7 +699,7 @@ const LANG_NAMES = {
 };
 
 // 2. Fetch or Generate Lesson
-app.post('/api/learning/lesson', async (req, res) => {
+app.post('/api/learning/lesson', authenticateToken, async (req, res) => {
   const { topic, classLevel, language, region, subject, chapter } = req.body;
 
   const cl = classLevel || 8;
@@ -669,7 +832,7 @@ Return ONLY valid JSON (no markdown, no extra text):
 });
 
 // 3. Quiz Generation Endpoint — supports numQuestions, difficulty, and full multilingual output
-app.post('/api/learning/quiz', async (req, res) => {
+app.post('/api/learning/quiz', authenticateToken, async (req, res) => {
   const { topic, language, classLevel, subject, chapter, numQuestions, difficulty } = req.body;
 
   const cl = classLevel || 8;
@@ -1296,7 +1459,7 @@ Return ONLY a valid JSON array (no markdown, no extra text, no code fences):
 });
 
 // 3b. Smart Board Teaching Endpoint
-app.post('/api/learning/smart-board/teach', async (req, res) => {
+app.post('/api/learning/smart-board/teach', authenticateToken, requireTeacherRole, async (req, res) => {
   const { topic, classLevel, language, region, subject, chapter, modes, followUpQuery, history } = req.body;
 
   const cl = classLevel || 8;
@@ -2392,7 +2555,7 @@ Return ONLY valid JSON (no markdown, no ticks):
 // Redundant first practice questions endpoint removed to consolidate logic in the active endpoint below.
 
 // 4. Feynman Socratic Discussion
-app.post('/api/learning/feynman/start', (req, res) => {
+app.post('/api/learning/feynman/start', authenticateToken, (req, res) => {
   const { topic, language, classLevel } = req.body;
   const lang = language || 'en';
   const langName = LANG_NAMES[lang] || 'English';
@@ -2420,7 +2583,7 @@ app.post('/api/learning/feynman/start', (req, res) => {
   });
 });
 
-app.post('/api/learning/feynman/respond', async (req, res) => {
+app.post('/api/learning/feynman/respond', authenticateToken, async (req, res) => {
   const { studentExplanation, topic, language, classLevel } = req.body;
   const lang = language || 'en';
   const cl = classLevel || 8;
@@ -2476,7 +2639,7 @@ app.post('/api/learning/feynman/respond', async (req, res) => {
 });
 
 // 5. AI Debate Arena
-app.post('/api/learning/debate/respond', async (req, res) => {
+app.post('/api/learning/debate/respond', authenticateToken, async (req, res) => {
   const { userArgument, topic, position, language, history, personalityMode } = req.body;
   const lang = language || 'en';
   const langName = LANG_NAMES[lang] || 'English';
@@ -2723,7 +2886,7 @@ app.post('/api/learning/debate/respond', async (req, res) => {
 });
 
 // Debate Topic Generator
-app.post('/api/learning/debate/generate-topic', async (req, res) => {
+app.post('/api/learning/debate/generate-topic', authenticateToken, async (req, res) => {
   const { classLevel, subject, language } = req.body;
   const cl = classLevel || 8;
   const sub = subject || 'Science';
@@ -2784,7 +2947,7 @@ app.post('/api/learning/debate/generate-topic', async (req, res) => {
 });
 
 // 6. Teacher Lesson Planner
-app.post('/api/teachers/lesson-planner', async (req, res) => {
+app.post('/api/teachers/lesson-planner', authenticateToken, requireTeacherRole, async (req, res) => {
   const { classLevel, board, subject, chapter, language, region, simplify } = req.body;
   const lang = language || 'en';
   const cl = classLevel || 8;
@@ -2954,7 +3117,7 @@ Your output must be ONLY valid JSON in this exact structure, with no markdown co
 });
 
 // AI Teaching Assistant Chat Route
-app.post('/api/teachers/assistant', async (req, res) => {
+app.post('/api/teachers/assistant', authenticateToken, requireTeacherRole, async (req, res) => {
   const { classLevel, board, subject, chapter, language, region, message } = req.body;
   const lang = language || 'en';
   const langName = LANG_NAMES[lang] || 'English';
@@ -3113,7 +3276,7 @@ function calculateJaccardSimilarity(str1, str2) {
 // ----------------------------------------------------
 // 📝 PRACTICE QUESTIONS ENDPOINT (MULTILINGUAL, UNIQUE & ADAPTIVE)
 // ----------------------------------------------------
-app.post('/api/learning/practice/questions', async (req, res) => {
+app.post('/api/learning/practice/questions', authenticateToken, async (req, res) => {
   const { topic, language, classLevel, subject, chapter, difficulty, numQuestions, questionCount, previousQuestions, sessionUuid } = req.body;
 
   const cl = classLevel || 8;
@@ -4663,11 +4826,12 @@ Return ONLY a valid JSON array of objects (no markdown, no extra text, no code f
 const analyticsCache = {};
 
 // 1. Log Study Activity
-app.post('/api/learning/activity/log', (req, res) => {
-  const { userId, activityType, subject, chapter, topic, timeSpent, score, totalQuestions, correctAnswers, wrongAnswers } = req.body;
+app.post('/api/learning/activity/log', authenticateToken, (req, res) => {
+  const userId = req.user.id;
+  const { activityType, subject, chapter, topic, timeSpent, score, totalQuestions, correctAnswers, wrongAnswers } = req.body;
   
-  if (!userId || !activityType) {
-    return res.status(400).json({ success: false, error: "Missing required fields userId or activityType" });
+  if (!activityType) {
+    return res.status(400).json({ success: false, error: "Missing required field activityType" });
   }
 
   try {
@@ -4695,8 +4859,8 @@ app.post('/api/learning/activity/log', (req, res) => {
 });
 
 // 2. Fetch Compiled Learning Analytics
-app.get('/api/learning/activity/stats', (req, res) => {
-  const userId = req.query.userId || "student_1";
+app.get('/api/learning/activity/stats', authenticateToken, (req, res) => {
+  const userId = req.user.id;
   
   // Check in-memory compiled cache first (valid for 5 minutes)
   const now = Date.now();
