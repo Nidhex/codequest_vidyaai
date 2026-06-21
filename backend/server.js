@@ -4834,11 +4834,31 @@ app.post('/api/learning/activity/log', authenticateToken, (req, res) => {
     return res.status(400).json({ success: false, error: "Missing required field activityType" });
   }
 
+  // Normalize subject to one of the 5 canonical subjects
+  // Maps subfields (Physics, Chemistry, History, etc.) to parent subject
+  function normalizeSubject(sub) {
+    if (!sub) return "Science";
+    const s = sub.trim().toLowerCase();
+    const scienceTerms = ["science", "physics", "chemistry", "biology", "botany", "zoology", "earth", "astronomy", "environment", "natural"];
+    const mathTerms = ["math", "algebra", "geometry", "trigonometry", "calculus", "arithmetic", "statistics"];
+    const socialTerms = ["social", "history", "geography", "civics", "economics", "political", "sociology"];
+    const englishTerms = ["english", "literature", "grammar", "composition", "reading", "writing"];
+    const hindiTerms = ["hindi", "sanskrit", "urdu"];
+    if (scienceTerms.some(t => s.includes(t))) return "Science";
+    if (mathTerms.some(t => s.includes(t))) return "Mathematics";
+    if (socialTerms.some(t => s.includes(t))) return "Social Science";
+    if (englishTerms.some(t => s.includes(t))) return "English";
+    if (hindiTerms.some(t => s.includes(t))) return "Hindi";
+    return sub; // keep original if not matched (will show as-is in analytics)
+  }
+
+  const normalizedSubject = normalizeSubject(subject);
+
   try {
     const result = db.addStudyLog({
       userId,
       activityType,
-      subject: subject || "Science",
+      subject: normalizedSubject,
       chapter: chapter || "",
       topic: topic || "",
       timeSpent: parseInt(timeSpent) || 10,
@@ -4983,9 +5003,9 @@ app.get('/api/learning/activity/stats', authenticateToken, (req, res) => {
 
     // F. Focus Tracking
     const activeSessions = logs.filter(l => l.timeSpent > 0);
-    const avgSessionDuration = activeSessions.length > 0 
+    const avgSessionDuration = activeSessions.length > 0
       ? Math.round(activeSessions.reduce((acc, l) => acc + l.timeSpent, 0) / activeSessions.length)
-      : 15;
+      : 0;
 
     // Peak focus hour calculation
     const hourCounts = {};
@@ -5003,7 +5023,7 @@ app.get('/api/learning/activity/stats', authenticateToken, (req, res) => {
     });
     const suffix = peakHourVal >= 12 ? "PM" : "AM";
     const displayHour = peakHourVal % 12 === 0 ? 12 : peakHourVal % 12;
-    const peakFocusHour = `${displayHour}:00 ${suffix}`;
+    const peakFocusHour = logs.length > 0 ? `${displayHour}:00 ${suffix}` : 'N/A';
 
     // G. AI Recommendations Engine
     const recommendations = [];
@@ -5097,7 +5117,7 @@ app.get('/api/learning/activity/stats', authenticateToken, (req, res) => {
         focusTracking: {
           avgSessionDuration,
           peakFocusHour,
-          attentionHistory: user.attentionScores || [85, 88, 78, 88, 84, 86, 91]
+          attentionHistory: user.attentionScores || []
         },
         recommendations
       }

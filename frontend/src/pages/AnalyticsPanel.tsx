@@ -66,9 +66,10 @@ export const AnalyticsPanel: React.FC<AnalyticsPanelProps> = ({ onNavigate }) =>
     return 'bg-emerald-500 border-emerald-400 text-slate-900 font-black shadow-[0_0_15px_rgba(16,185,129,0.4)] animate-pulse';
   };
 
-  // Check if there is any study activity logged yet
+  // Check if there is any real study activity logged yet
   const totalHeatmapCount = heatmapData.reduce((acc, h) => acc + h.count, 0);
-  const noActivity = totalHeatmapCount === 0;
+  const hasAnyQuizHistory = quizStats.recentQuizHistory && quizStats.recentQuizHistory.length > 0;
+  const noActivity = totalHeatmapCount === 0 && xp === 0 && !hasAnyQuizHistory;
 
   // ----------------------------------------------------
   // 📊 SVG PROGRESS RING VALUES

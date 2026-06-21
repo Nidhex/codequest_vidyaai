@@ -208,41 +208,31 @@ export const useAnalyticsStore = create<AnalyticsStore>((set, get) => ({
     const timestamp = now.toISOString();
     const id = "log-" + Math.random().toString(36).substr(2, 9);
     
-    // --- 1. XP REWARDS ENGINE CALCULATIONS ---
-    let baseXP = 50; // default for lessons
-    let bonusXP = 0;
-    
+    // --- 1. REALISTIC XP REWARDS ENGINE ---
+    // Gradual progression: first activities earn small XP, builds over time
+    let xpToAdd = 10; // base minimum
+
     if (logInput.activityType === 'quiz') {
-      baseXP = logInput.score !== undefined ? Math.round(logInput.score * 1.2) : 80;
-      // Full accuracy combo bonus
-      if (logInput.score === 100) {
-        bonusXP += 40; // Accuracy combo
-      }
-      // Difficulty bonus
-      if (logInput.difficulty === 'hard') {
-        bonusXP += 30;
-      } else if (logInput.difficulty === 'medium') {
-        bonusXP += 10;
-      }
+      // Score-based: 5–25 XP range
+      const scoreRatio = logInput.score !== undefined ? logInput.score / 100 : 0.5;
+      xpToAdd = Math.round(5 + scoreRatio * 20);
+    } else if (logInput.activityType === 'lesson') {
+      xpToAdd = 15; // flat 15 XP per lesson
     } else if (logInput.activityType === 'feynman') {
-      baseXP = logInput.score !== undefined ? Math.round(logInput.score * 1.3) : 90;
-      if (logInput.score && logInput.score >= 90) {
-        bonusXP += 30; // High understanding bonus
-      }
+      const scoreRatio = logInput.score !== undefined ? logInput.score / 100 : 0.5;
+      xpToAdd = Math.round(10 + scoreRatio * 15); // 10-25 XP
     } else if (logInput.activityType === 'debate') {
-      baseXP = logInput.score !== undefined ? Math.round(logInput.score * 1.3) : 100;
-      if (logInput.score && logInput.score >= 85) {
-        bonusXP += 35; // Logic master bonus
-      }
+      const scoreRatio = logInput.score !== undefined ? logInput.score / 100 : 0.5;
+      xpToAdd = Math.round(10 + scoreRatio * 20); // 10-30 XP
     }
-    
-    // Streak multiplier
+
+    // Small streak bonus: +2 XP per streak day, max +10 XP
     const currentStreak = get().streak;
-    const streakMultiplier = 1.0 + Math.min(currentStreak * 0.05, 0.5); // Max 1.5x multiplier
-    const totalXPToAdd = Math.round((baseXP + bonusXP) * streakMultiplier);
-    
+    const streakBonus = Math.min(currentStreak * 2, 10);
+    const totalXPToAdd = xpToAdd + streakBonus;
+
     const newXP = get().xp + totalXPToAdd;
-    const newLevel = Math.floor(newXP / 400) + 1;
+    const newLevel = Math.floor(newXP / 500) + 1; // 500 XP per level
 
     // --- 2. COMPILE LOGS & RECALCULATE STATE LOCALLY ---
     const newLog: StudyLog = {
@@ -324,19 +314,29 @@ export const useAnalyticsStore = create<AnalyticsStore>((set, get) => ({
       return ach;
     });
 
-    // Update Heatmap local logs
+    // Update Heatmap local logs — add today's entry if not present
     const dateStr = timestamp.split('T')[0];
-    const updatedHeatmap = get().heatmapData.map(h => {
-      if (h.date === dateStr) {
-        return {
-          ...h,
-          count: h.count + 1,
-          minutes: h.minutes + logInput.timeSpent,
-          xp: h.xp + totalXPToAdd
-        };
-      }
-      return h;
-    });
+    const existingHeatmapEntry = get().heatmapData.find(h => h.date === dateStr);
+    let updatedHeatmap: Array<{ date: string; count: number; minutes: number; xp: number }>;
+    if (existingHeatmapEntry) {
+      updatedHeatmap = get().heatmapData.map(h => {
+        if (h.date === dateStr) {
+          return {
+            ...h,
+            count: h.count + 1,
+            minutes: h.minutes + logInput.timeSpent,
+            xp: h.xp + totalXPToAdd
+          };
+        }
+        return h;
+      });
+    } else {
+      // Today doesn't exist in heatmap yet — add it
+      updatedHeatmap = [
+        ...get().heatmapData,
+        { date: dateStr, count: 1, minutes: logInput.timeSpent, xp: totalXPToAdd }
+      ];
+    }
 
     // Recalculate Quiz analytics
     const quizLogs = newLogs.filter(l => l.activityType === 'quiz');

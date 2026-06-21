@@ -80,11 +80,11 @@
         0
       ],
       "subjectProgress": {
-        "Science": 10,
-        "Mathematics": 10,
-        "Social Science": 10,
-        "English": 10,
-        "Hindi": 10
+        "Science": 0,
+        "Mathematics": 0,
+        "Social Science": 0,
+        "English": 0,
+        "Hindi": 0
       }
     },
     {
@@ -95,7 +95,7 @@
       "passwordHash": "$2b$10$AJqh7zoK9SePHFJKXiPc/eJaOjGWGrTU/Zv1V1hDNqYeTww81cJ96",
       "class": "12",
       "preferredLanguage": "en",
-      "xp": 142,
+      "xp": 43,
       "level": 1,
       "streak": 1,
       "badges": [],
@@ -108,11 +108,11 @@
         1
       ],
       "subjectProgress": {
-        "Science": 49,
-        "Mathematics": 49,
-        "Social Science": 49,
-        "English": 49,
-        "Hindi": 49
+        "Science": 24,
+        "Mathematics": 0,
+        "Social Science": 0,
+        "English": 0,
+        "Hindi": 0
       }
     }
   ],
@@ -260,7 +260,7 @@
       "id": "log-seed-8",
       "userId": "student_1",
       "activityType": "feynman",
-      "subject": "Social Science",
+      "subject": "Science",
       "chapter": "History",
       "topic": "Industrial Revolution",
       "timestamp": "2026-06-19T11:17:38.663Z",
@@ -286,7 +286,7 @@
       "timestamp": "2026-06-21T12:19:02.846Z",
       "userId": "user-4xt4hf1x6",
       "activityType": "feynman",
-      "subject": "Physics",
+      "subject": "Science",
       "chapter": "Chapter 1: Physical world measurement scales",
       "topic": "Core Theory",
       "timeSpent": 2,
@@ -297,7 +297,7 @@
       "timestamp": "2026-06-21T12:19:26.744Z",
       "userId": "user-4xt4hf1x6",
       "activityType": "feynman",
-      "subject": "Physics",
+      "subject": "Science",
       "chapter": "Chapter 1: Physical world measurement scales",
       "topic": "Core Theory",
       "timeSpent": 1,
@@ -308,7 +308,7 @@
       "timestamp": "2026-06-21T12:20:15.074Z",
       "userId": "user-4xt4hf1x6",
       "activityType": "quiz",
-      "subject": "Physics",
+      "subject": "Science",
       "chapter": "Chapter 1: Physical world measurement scales",
       "topic": "Core Theory",
       "timeSpent": 1,

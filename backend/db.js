@@ -4,6 +4,7 @@ const bcrypt = require('bcryptjs');
 
 const DB_FILE = path.join(__dirname, 'database.json');
 
+// Seed logs are ONLY for the demo account (student_1), never for real users
 function getSeedLogs() {
   const now = Date.now();
   const dayMs = 24 * 60 * 60 * 1000;
@@ -63,7 +64,7 @@ function getSeedLogs() {
       topic: "Photosynthesis",
       timestamp: new Date(now - 5 * dayMs).toISOString(),
       timeSpent: 10,
-      score: 60, // Under 70%, weak topic
+      score: 60,
       totalQuestions: 5,
       correctAnswers: 3,
       wrongAnswers: 2
@@ -101,7 +102,7 @@ function getSeedLogs() {
       topic: "Industrial Revolution",
       timestamp: new Date(now - 2 * dayMs).toISOString(),
       timeSpent: 14,
-      score: 55 // Under 70%, weak topic
+      score: 55
     },
     {
       id: "log-seed-9",
@@ -120,50 +121,64 @@ function getSeedLogs() {
   ];
 }
 
-// Recalculates stats, subject Progress, streaks, and levels dynamically
+// Recalculates stats, subjectProgress, streaks, and levels dynamically
+// ONLY for the specific user's actual logs — NO phantom baselines
 function recalculateUserStats(userId, data) {
   const user = data.users.find(u => u.id === userId);
   if (!user) return;
 
   const logs = data.studyLogs.filter(l => l.userId === userId);
-  
-  // 1. Recalculate subject Progress (mastery %)
+
+  // 1. Recalculate subject mastery (ONLY from real logs, NO 70% baseline)
   const subjects = ["Science", "Mathematics", "Social Science", "English", "Hindi"];
   const progress = {};
-  
+
   subjects.forEach(sub => {
     const subLogs = logs.filter(l => l.subject && l.subject.toLowerCase() === sub.toLowerCase());
-    
-    // Graded logs
+
+    // If the user has never touched this subject → 0%
+    if (subLogs.length === 0) {
+      progress[sub] = 0;
+      return;
+    }
+
     const gradedLogs = subLogs.filter(l => l.score !== undefined && l.score !== null);
-    // Lesson logs
     const lessonLogs = subLogs.filter(l => l.activityType === 'lesson');
-    
-    let avgScore = 70; // baseline
+
+    let avgScore = 0; // NO phantom baseline — real 0 if no graded logs
     if (gradedLogs.length > 0) {
       const sum = gradedLogs.reduce((acc, l) => acc + l.score, 0);
       avgScore = sum / gradedLogs.length;
     }
-    
+
     const lessonCount = lessonLogs.length;
-    const lessonProgress = Math.min(lessonCount * 20, 100); // 20% per lesson up to 100%
-    
-    // Weighted formula: 70% average performance, 30% completeness
-    const mastery = Math.round((avgScore * 0.7) + (lessonProgress * 0.3));
-    progress[sub] = Math.min(Math.max(mastery, 10), 100);
+    const lessonProgress = Math.min(lessonCount * 15, 60); // 15% per lesson, max 60%
+
+    // Weighted: graded performance (70%) + lesson completion (30%)
+    // If only lessons (no grades), score from lesson progress alone
+    let mastery;
+    if (gradedLogs.length > 0) {
+      mastery = Math.round((avgScore * 0.7) + (lessonProgress * 0.3));
+    } else {
+      // Lesson-only: progress from lessons
+      mastery = lessonProgress;
+    }
+
+    // Hard cap: 0-100, NO artificial minimum floor
+    progress[sub] = Math.min(Math.max(mastery, 0), 100);
   });
-  
+
   user.subjectProgress = progress;
 
-  // 2. Recalculate streak & streakLogs (last 5 days)
+  // 2. Recalculate streak (real streak, NO minimum of 1 for fake users)
   const now = new Date();
   const dayMs = 24 * 60 * 60 * 1000;
-  
+
   const activeDates = new Set(logs.map(l => {
     const d = new Date(l.timestamp);
     return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
   }));
-  
+
   const streakLogs = [];
   for (let i = 4; i >= 0; i--) {
     const d = new Date(now.getTime() - i * dayMs);
@@ -172,27 +187,28 @@ function recalculateUserStats(userId, data) {
   }
   user.streakLogs = streakLogs;
 
-  // Calculate current streak
+  // Calculate real current streak — 0 if no activity
   let currentStreak = 0;
-  let checkDate = new Date(now);
-  
-  // If they didn't study today, count starting from yesterday
-  const todayStr = `${checkDate.getFullYear()}-${checkDate.getMonth() + 1}-${checkDate.getDate()}`;
-  if (!activeDates.has(todayStr)) {
-    checkDate = new Date(now.getTime() - dayMs);
-  }
-  
-  while (true) {
-    const dateStr = `${checkDate.getFullYear()}-${checkDate.getMonth() + 1}-${checkDate.getDate()}`;
-    if (activeDates.has(dateStr)) {
-      currentStreak++;
-      checkDate = new Date(checkDate.getTime() - dayMs);
-    } else {
-      break;
+  if (activeDates.size > 0) {
+    let checkDate = new Date(now);
+    const todayStr = `${checkDate.getFullYear()}-${checkDate.getMonth() + 1}-${checkDate.getDate()}`;
+    if (!activeDates.has(todayStr)) {
+      checkDate = new Date(now.getTime() - dayMs);
+    }
+
+    while (true) {
+      const dateStr = `${checkDate.getFullYear()}-${checkDate.getMonth() + 1}-${checkDate.getDate()}`;
+      if (activeDates.has(dateStr)) {
+        currentStreak++;
+        checkDate = new Date(checkDate.getTime() - dayMs);
+      } else {
+        break;
+      }
     }
   }
-  
-  user.streak = Math.max(currentStreak, 1);
+
+  // Real streak — no artificial minimum
+  user.streak = currentStreak;
 }
 
 const initialTemplate = {
@@ -275,11 +291,17 @@ function getData() {
       data.studyLogs = [];
       dirty = true;
     }
-    if (data.studyLogs.length === 0) {
-      data.studyLogs = getSeedLogs();
+
+    // CRITICAL FIX: Only seed logs for the demo student_1 account
+    // NEVER inject seed logs into real user accounts
+    const student1LogsExist = data.studyLogs.some(l => l.userId === 'student_1');
+    if (!student1LogsExist) {
+      // Only add seed logs for the demo student account
+      const seedLogs = getSeedLogs();
+      data.studyLogs = [...data.studyLogs, ...seedLogs];
       dirty = true;
     }
-    
+
     // Seed default credentials for Aarav Sharma & Dr Priyamvada Sen if missing
     let userDirty = false;
     if (Array.isArray(data.users)) {
@@ -298,7 +320,7 @@ function getData() {
       });
     }
 
-    // Perform sync updates for student_1 profile based on seed logs
+    // Only recalculate stats for the demo account, never real users
     if (dirty) {
       recalculateUserStats("student_1", data);
     }
@@ -334,7 +356,7 @@ module.exports = {
   createUser(userPayload) {
     const db = getData();
     const id = "user-" + Math.random().toString(36).substr(2, 9);
-    
+
     let newUser;
     if (userPayload.role === 'teacher') {
       newUser = {
@@ -370,7 +392,7 @@ module.exports = {
         }
       };
     }
-    
+
     db.users.push(newUser);
     saveData(db);
     return newUser;
@@ -401,10 +423,11 @@ module.exports = {
     const db = getData();
     return db.analytics;
   },
-  
-  // NEW METHODS FOR ENGAGEMENT AI
+
+  // ENGAGEMENT AI — PER-USER TELEMETRY
   getStudyLogs(userId) {
     const db = getData();
+    // Return ONLY this user's own logs — never other users' logs
     return db.studyLogs.filter(l => l.userId === userId);
   },
   addStudyLog(log) {
@@ -416,45 +439,55 @@ module.exports = {
       ...log
     };
     db.studyLogs.push(newLog);
-    
-    // Update user stats
+
+    // Update user stats for the specific user
     const user = db.users.find(u => u.id === log.userId);
     if (user) {
-      // 1. Calculate XP add
-      let xpAdded = 50; // default for lessons
+      // 1. Scaled XP system — much more gradual progression
+      let xpAdded = 10; // small base for lessons
       if (log.activityType === 'quiz') {
-        xpAdded = log.score !== undefined ? Math.round(log.score * 1.2) : 80;
+        // Quiz: score-based, 5-25 XP range
+        const scoreRatio = log.score !== undefined ? log.score / 100 : 0.5;
+        xpAdded = Math.round(5 + scoreRatio * 20); // 5-25 XP
+      } else if (log.activityType === 'lesson') {
+        xpAdded = 15; // flat 15 XP per lesson
       } else if (log.activityType === 'feynman') {
-        xpAdded = log.score !== undefined ? Math.round(log.score * 1.5) : 100;
+        const scoreRatio = log.score !== undefined ? log.score / 100 : 0.5;
+        xpAdded = Math.round(10 + scoreRatio * 15); // 10-25 XP
       } else if (log.activityType === 'debate') {
-        xpAdded = log.score !== undefined ? Math.round(log.score * 1.5) : 120;
+        const scoreRatio = log.score !== undefined ? log.score / 100 : 0.5;
+        xpAdded = Math.round(10 + scoreRatio * 20); // 10-30 XP
       }
-      
+
       user.xp += xpAdded;
-      user.level = Math.floor(user.xp / 400) + 1;
-      
-      // Update badge triggers
-      if (user.xp >= 1500 && !user.badges.includes("Legendary Learner")) {
+      user.level = Math.floor(user.xp / 500) + 1; // 500 XP per level
+
+      // Badge triggers
+      if (user.xp >= 500 && !user.badges.includes("Rising Star")) {
+        user.badges.push("Rising Star");
+      }
+      if (user.xp >= 2000 && !user.badges.includes("Legendary Learner")) {
         user.badges.push("Legendary Learner");
       }
-      if (db.studyLogs.filter(l => l.userId === user.id && l.activityType === 'debate').length >= 3 && !user.badges.includes("Debate Master")) {
+      const userLogs = db.studyLogs.filter(l => l.userId === user.id);
+      if (userLogs.filter(l => l.activityType === 'debate').length >= 3 && !user.badges.includes("Debate Master")) {
         user.badges.push("Debate Master");
       }
-      if (db.studyLogs.filter(l => l.userId === user.id && l.activityType === 'feynman').length >= 3 && !user.badges.includes("Feynman Sage")) {
+      if (userLogs.filter(l => l.activityType === 'feynman').length >= 3 && !user.badges.includes("Feynman Sage")) {
         user.badges.push("Feynman Sage");
       }
-      
+
       // Add to completed lessons
       if (log.activityType === 'lesson' && log.topic) {
         if (!user.completedLessons.includes(log.topic)) {
           user.completedLessons.push(log.topic);
         }
       }
-      
-      // 2. Recalculate HSL progressions, streaks, and subject progress
+
+      // 2. Recalculate this user's stats (subject progress, streak, level)
       recalculateUserStats(user.id, db);
     }
-    
+
     saveData(db);
     return { log: newLog, user: user || null };
   }
