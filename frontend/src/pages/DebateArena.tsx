@@ -8,6 +8,8 @@ import {
   Sparkles, Bookmark, User, Brain, CheckCircle, Flame
 } from 'lucide-react';
 import { io } from 'socket.io-client';
+import { EngagementTracker } from '../components/EngagementTracker';
+import { PomodoroTimer } from '../components/PomodoroTimer';
 
 interface DebateArenaProps {
   onNavigate: (page: string) => void;
@@ -308,7 +310,7 @@ const RadarChart: React.FC<{ scores: Record<string, number> }> = ({ scores }) =>
 // 🎤 CORE DEBATE CONTROLLER
 // ----------------------------------------------------
 const DebateArenaContent: React.FC<DebateArenaProps> = ({ onNavigate }) => {
-  const { debate, language, user, addDebateArgument, setDebateScores, resetDebate, updateXP, setLanguage, setDebateTopic, setClassLevel } = useMainStore();
+  const { debate, language, user, addDebateArgument, setDebateScores, resetDebate, updateXP, setLanguage, setDebateTopic, setClassLevel, updateEngagement } = useMainStore();
 
   // Configuration settings
   const [selectedCategory, setSelectedCategory] = useState<'science' | 'society' | 'environment'>('science');
@@ -678,7 +680,9 @@ const DebateArenaContent: React.FC<DebateArenaProps> = ({ onNavigate }) => {
           setAiEmotion(data.emotion);
         }
 
-        updateXP(35); 
+        // Award regular + bonus XP and boost focus
+        updateXP(35 + 30); 
+        updateEngagement(100, 0.28, false);
         speakText(data.counterArgument || "Let us continue.");
         setRoundCount(prev => prev + 1);
       } else {
@@ -726,7 +730,9 @@ const DebateArenaContent: React.FC<DebateArenaProps> = ({ onNavigate }) => {
         tips: ["State your core thesis statement early.", "Use regional examples to strengthen context."]
       });
       setAiEmotion('skeptical');
-      updateXP(25);
+      // Award regular + bonus XP and boost focus
+      updateXP(25 + 30);
+      updateEngagement(100, 0.28, false);
       speakText(textResponse);
       setRoundCount(prev => prev + 1);
     } finally {
@@ -850,7 +856,9 @@ const DebateArenaContent: React.FC<DebateArenaProps> = ({ onNavigate }) => {
         setAiEmotion(data.emotion);
       }
 
-      updateXP(35);
+      // Award regular + bonus XP and boost focus
+      updateXP(35 + 30);
+      updateEngagement(100, 0.28, false);
       speakText(data.counterArgument || "Let us begin.");
       setRoundCount(1);
       setTimerActive(true);
@@ -936,6 +944,12 @@ const DebateArenaContent: React.FC<DebateArenaProps> = ({ onNavigate }) => {
               ) : (
                 <p className="text-cyber-text/60">Hologram Standby. Set up your debate and speak/type to begin.</p>
               )}
+            </div>
+
+            {/* Focus Companions */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
+              <EngagementTracker />
+              <PomodoroTimer inline={true} />
             </div>
           </div>
 
@@ -1428,6 +1442,12 @@ const DebateArenaContent: React.FC<DebateArenaProps> = ({ onNavigate }) => {
                 🏆 End Debate & View Analytics
               </button>
             )}
+          </div>
+
+          {/* Focus Companions */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <EngagementTracker />
+            <PomodoroTimer inline={true} />
           </div>
 
         </div>

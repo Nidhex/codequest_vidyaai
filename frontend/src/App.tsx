@@ -15,6 +15,7 @@ import { SmartBoard } from './pages/SmartBoard';
 import { PracticeQuestions } from './pages/PracticeQuestions';
 import { Leaderboard } from './pages/Leaderboard';
 import { SettingsPage } from './pages/SettingsPage';
+import { PomodoroTimer } from './components/PomodoroTimer';
 
 function App() {
   const [currentPage, setCurrentPage] = useState<string>('landing');
@@ -152,6 +153,9 @@ function App() {
           {renderPage()}
         </main>
       </div>
+
+      {/* 🍅 GLOBAL POMODORO TIMER */}
+      <PomodoroTimer />
 
     </div>
   );

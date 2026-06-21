@@ -8,6 +8,8 @@ import {
   CheckCircle2, XCircle, Eye, EyeOff, Trophy
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { EngagementTracker } from '../components/EngagementTracker';
+import { PomodoroTimer } from '../components/PomodoroTimer';
 
 interface PracticeQuestionsProps {
   onNavigate: (page: string) => void;
@@ -25,7 +27,7 @@ interface Question {
 type BoardState = 'idle' | 'loading' | 'quiz';
 
 export const PracticeQuestions: React.FC<PracticeQuestionsProps> = ({ onNavigate }) => {
-  const { language, setLanguage, classLevel, setClassLevel, updateXP } = useMainStore();
+  const { language, setLanguage, classLevel, setClassLevel, updateXP, engagement, updateEngagement } = useMainStore();
 
   // Curriculum
   const [gradeLevel, setGradeLevel] = useState(classLevel);
@@ -47,6 +49,8 @@ export const PracticeQuestions: React.FC<PracticeQuestionsProps> = ({ onNavigate
   const [score, setScore] = useState(0);
   const [answered, setAnswered] = useState<Set<number>>(new Set());
   const [isAnimating, setIsAnimating] = useState(false);
+  const [xpToast, setXpToast] = useState<{ show: boolean; amount: number; label: string }>({ show: false, amount: 0, label: '' });
+  const [shake, setShake] = useState(false);
 
   // Difficulty & count
   const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
@@ -184,9 +188,32 @@ export const PracticeQuestions: React.FC<PracticeQuestionsProps> = ({ onNavigate
     setAnswered(newAnswered);
     const letter = option[0]; // 'A', 'B', etc.
     if (q && letter === q.correctOption) {
+      // XP scales with difficulty
+      const xpMap: Record<string, number> = { easy: 5, medium: 10, hard: 20 };
+      const xp = xpMap[difficulty] ?? 10;
+      const totalXp = xp + 30;
       setScore(prev => prev + 1);
-      updateXP(10);
-      confetti({ particleCount: 35, spread: 50, colors: ['#22c55e','#86efac'], origin: { y: 0.5 } });
+      updateXP(totalXp);
+
+      // Boost focus score in engagement tracker
+      updateEngagement(100, 0.28, false);
+
+      // Show XP toast
+      const labels = ['Brilliant! 🌟 Focus Boosted!', 'Correct! 💪 Peak Focus!', 'Nailed it! 🚀 100% Attention!', 'Perfect! ✨ Focus Gained!', 'Awesome! 🔥 Eye-on-Board!'];
+      setXpToast({ show: true, amount: totalXp, label: labels[Math.floor(Math.random() * labels.length)] });
+      setTimeout(() => setXpToast({ show: false, amount: 0, label: '' }), 2500);
+
+      // Confetti burst — more particles for harder difficulty
+      const particles = difficulty === 'hard' ? 100 : difficulty === 'medium' ? 60 : 35;
+      confetti({ particleCount: particles, spread: 65, colors: ['#22c55e', '#86efac', '#00f2fe', '#9b5de5'], origin: { y: 0.55 }, startVelocity: 30 });
+      if (difficulty === 'hard') {
+        setTimeout(() => confetti({ particleCount: 40, angle: 120, spread: 40, colors: ['#ffd700', '#ff6b6b'], origin: { x: 0, y: 0.6 } }), 200);
+        setTimeout(() => confetti({ particleCount: 40, angle: 60, spread: 40, colors: ['#ffd700', '#ff6b6b'], origin: { x: 1, y: 0.6 } }), 400);
+      }
+    } else {
+      // Wrong answer: shake the board
+      setShake(true);
+      setTimeout(() => setShake(false), 600);
     }
   };
 
@@ -245,12 +272,25 @@ export const PracticeQuestions: React.FC<PracticeQuestionsProps> = ({ onNavigate
           <RefreshCw className="w-3.5 h-3.5" /> Reset
         </button>
       </div>
+      {/* XP Toast overlay */}
+      {xpToast.show && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
+          <div className="bg-gradient-to-r from-green-500 to-emerald-400 text-white px-6 py-3 rounded-2xl font-bold text-base shadow-2xl flex items-center gap-3 animate-bounce border border-green-300">
+            <span className="text-2xl">⭐</span>
+            <div>
+              <div className="text-lg font-black">+{xpToast.amount} XP</div>
+              <div className="text-xs font-medium opacity-90">{xpToast.label}</div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* MAIN GRID */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
 
-        {/* LEFT — INPUT PANEL */}
-        <div className="lg:col-span-4 bg-white rounded-3xl border border-slate-100 shadow-sm p-6 flex flex-col gap-4">
+        {/* LEFT — INPUT PANEL & FOCUS COMPANIONS */}
+        <div className="lg:col-span-4 flex flex-col gap-5">
+          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 flex flex-col gap-4">
 
           {/* Score card */}
           {isQuiz && (
@@ -417,6 +457,13 @@ export const PracticeQuestions: React.FC<PracticeQuestionsProps> = ({ onNavigate
               </div>
             </div>
           )}
+          </div>
+
+          {/* Focus Companion Widgets */}
+          <div className="flex flex-col gap-5">
+            <EngagementTracker />
+            <PomodoroTimer inline={true} />
+          </div>
         </div>
 
         {/* RIGHT — GREEN BOARD */}
