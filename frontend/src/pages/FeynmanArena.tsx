@@ -471,17 +471,28 @@ export const FeynmanArena: React.FC<FeynmanArenaProps> = ({ onNavigate }) => {
                 </div>
 
                 {/* Input area */}
-                <div className="pt-2 border-t border-cyber-border/20 flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="Type description back..."
-                    value={inputVal}
-                    onChange={(e) => setInputVal(e.target.value)}
-                    className="flex-1 bg-black/40 border border-cyber-border/60 p-2.5 rounded-xl text-xs text-white focus:outline-none focus:border-cyber-purple"
-                  />
+                <div className="pt-2 border-t border-cyber-border/20 flex gap-2 items-center">
+                  <div className="relative flex-1">
+                    <input
+                      type="text"
+                      placeholder="Type or speak description back..."
+                      value={inputVal}
+                      onChange={(e) => setInputVal(e.target.value)}
+                      className="w-full bg-black/40 border border-cyber-border/60 pl-3.5 pr-10 py-2.5 rounded-xl text-xs text-white focus:outline-none focus:border-cyber-purple"
+                    />
+                    <button
+                      type="button"
+                      onClick={toggleMic}
+                      className={`absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-full transition-all ${
+                        isListening ? 'text-rose-500 animate-pulse bg-rose-50' : 'text-cyber-text/40 hover:text-white'
+                      }`}
+                    >
+                      <Mic className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                   <button
                     onClick={handleSubmitExplanation}
-                    className="px-4 bg-cyber-purple rounded-xl text-white font-bold cursor-pointer"
+                    className="px-4 py-2.5 bg-cyber-purple rounded-xl text-white font-bold cursor-pointer text-xs"
                   >
                     Send
                   </button>

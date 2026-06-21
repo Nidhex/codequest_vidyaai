@@ -249,7 +249,7 @@ export const QuizArena: React.FC<QuizArenaProps> = ({
         {/* HEADER */}
         <div className="flex items-center justify-between border-b border-cyber-border/20 pb-4 font-mono text-xs">
           <button
-            onClick={() => onNavigate('lessons')}
+            onClick={() => onNavigate('dashboard')}
             className="flex items-center space-x-1.5 text-cyber-blue hover:text-cyan-400 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -487,7 +487,7 @@ export const QuizArena: React.FC<QuizArenaProps> = ({
       {/* HEADER */}
       <div className="flex items-center justify-between border-b border-cyber-border/20 pb-4 font-mono text-xs">
         <button
-          onClick={() => onNavigate('lessons')}
+          onClick={() => onNavigate('dashboard')}
           className="flex items-center space-x-1.5 text-cyber-blue hover:text-cyan-400 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />

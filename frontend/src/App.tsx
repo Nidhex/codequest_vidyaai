@@ -3,7 +3,7 @@ import { Sidebar } from './components/Sidebar';
 import { Navbar } from './components/Navbar';
 import { LandingPage } from './pages/LandingPage';
 import { StudentDashboard } from './pages/StudentDashboard';
-import { LessonViewer } from './pages/LessonViewer';
+
 import { QuizArena } from './pages/QuizArena';
 import { DebateArena } from './pages/DebateArena';
 import { VoiceClassroom } from './pages/VoiceClassroom';
@@ -11,7 +11,8 @@ import { FeynmanArena } from './pages/FeynmanArena';
 import { TeacherDashboard } from './pages/TeacherDashboard';
 import { AdminDashboard } from './pages/AdminDashboard';
 import { AnalyticsPanel } from './pages/AnalyticsPanel';
-import { AvatarStudio } from './pages/AvatarStudio';
+import { SmartBoard } from './pages/SmartBoard';
+import { PracticeQuestions } from './pages/PracticeQuestions';
 import { Leaderboard } from './pages/Leaderboard';
 import { SettingsPage } from './pages/SettingsPage';
 
@@ -56,8 +57,6 @@ function App() {
         return <LandingPage onNavigate={setCurrentPage} />;
       case 'dashboard':
         return <StudentDashboard />;
-      case 'lessons':
-        return <LessonViewer onNavigate={setCurrentPage} onStartQuiz={handleStartQuiz} />;
       case 'quiz':
         return (
           <QuizArena 
@@ -81,8 +80,10 @@ function App() {
         return <AdminDashboard onNavigate={setCurrentPage} />;
       case 'analytics':
         return <AnalyticsPanel onNavigate={setCurrentPage} />;
-      case 'avatar':
-        return <AvatarStudio onNavigate={setCurrentPage} />;
+      case 'smartboard':
+        return <SmartBoard onNavigate={setCurrentPage} />;
+      case 'practice':
+        return <PracticeQuestions onNavigate={setCurrentPage} />;
       case 'leaderboard':
         return <Leaderboard />;
       case 'settings':

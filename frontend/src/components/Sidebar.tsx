@@ -1,8 +1,8 @@
 import React from 'react';
 import { 
-  Home, LayoutDashboard, BookOpen, Volume2, Brain, 
-  MessageSquare, HelpCircle, User, Smile, Eye, 
-  Languages, Trophy, Settings, ChevronLeft, ChevronRight, Sparkles 
+  Home, LayoutDashboard, Volume2, Brain, 
+  MessageSquare, User, Eye, 
+  Trophy, Settings, ChevronLeft, ChevronRight, Sparkles, Presentation, ClipboardList
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -36,8 +36,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       items: [
         { id: 'landing', label: 'Landing Page', icon: Home },
         { id: 'dashboard', label: 'Student Portal', icon: LayoutDashboard },
-        { id: 'lessons', label: 'Learn Modules', icon: BookOpen },
-        { id: 'voice', label: 'AI Voice Class', icon: Volume2 }
+        { id: 'voice', label: 'AI Voice Practice', icon: Volume2 }
       ]
     },
     {
@@ -51,7 +50,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
     {
       title: "AI Tools",
       items: [
-        { id: 'avatar', label: 'Avatar Studio', icon: Smile },
+        { id: 'smartboard', label: 'AI Smart Board', icon: Presentation },
+        { id: 'practice', label: 'Practice Zone', icon: ClipboardList },
         { id: 'analytics', label: 'Engagement AI', icon: Eye }
       ]
     },

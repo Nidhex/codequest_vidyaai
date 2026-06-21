@@ -203,63 +203,68 @@ const KNOWLEDGE_BASE = {
 };
 
 // ----------------------------------------------------
-// 🤖 MULTI-LLM ROUTING GATEWAY WITH RATE-LIMIT PROTECTION
+// 🤖 MULTI-LLM ROUTING GATEWAY WITH FAST-TIMEOUT PROTECTION
 // ----------------------------------------------------
 
-// Simple throttle: track last Gemini call time to prevent 429 cascades
+// Track last Gemini call time and consecutive 429 errors
 let lastGeminiCallTime = 0;
-const GEMINI_MIN_INTERVAL_MS = 5000; // max 12 calls/min to stay under 15 RPM limit
+const GEMINI_MIN_INTERVAL_MS = 2000;
+let gemini429Count = 0;
+let gemini429SkipUntil = 0;
 
-async function queryLLMChain(prompt, systemInstruction = "") {
+async function queryLLMChain(prompt, systemInstruction = "", timeoutMs = 5000) {
   const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-
-  // Throttle: wait if we called Gemini too recently
   const now = Date.now();
-  const timeSinceLast = now - lastGeminiCallTime;
-  if (timeSinceLast < GEMINI_MIN_INTERVAL_MS) {
-    const waitMs = GEMINI_MIN_INTERVAL_MS - timeSinceLast;
-    await new Promise(resolve => setTimeout(resolve, waitMs));
-  }
 
-  // Try gemini-2.0-flash first (15 RPM free tier, better than 2.5-flash's 10 RPM)
-  const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
-  const geminiBody = JSON.stringify({
-    contents: [{ parts: [{ text: `${systemInstruction}\n\nUser Prompt: ${prompt}` }] }],
-    generationConfig: { temperature: 0.7, maxOutputTokens: 2048 }
-  });
+  // If we had 3+ consecutive 429s in the last 2 minutes, skip Gemini and go straight to fallback
+  const skipGemini = gemini429Count >= 3 && now < gemini429SkipUntil;
 
-  const attemptGemini = async () => {
-    lastGeminiCallTime = Date.now();
-    const res = await fetch(geminiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: geminiBody
-    });
-    if (res.status === 429) throw new Error('RATE_LIMIT_429');
-    if (!res.ok) throw new Error(`Gemini status ${res.status}`);
-    const data = await res.json();
-    return {
-      provider: "gemini",
-      text: data.candidates[0].content.parts[0].text
-    };
-  };
-
-  try {
-    console.log(`Attempting LLM call via gemini-2.0-flash...`);
-    return await attemptGemini();
-  } catch (err) {
-    if (err.message === 'RATE_LIMIT_429') {
-      console.warn(`Gemini 429 — waiting 8s before retry...`);
-      await new Promise(resolve => setTimeout(resolve, 8000));
-      try {
-        console.log(`Retrying LLM call via gemini-2.0-flash...`);
-        return await attemptGemini();
-      } catch (retryErr) {
-        console.warn(`Gemini retry failed: ${retryErr.message}`);
-      }
-    } else {
-      console.warn(`Gemini failed: ${err.message}`);
+  if (!skipGemini && GEMINI_API_KEY) {
+    // Minimum spacing between Gemini calls
+    const timeSinceLast = now - lastGeminiCallTime;
+    if (timeSinceLast < GEMINI_MIN_INTERVAL_MS) {
+      await new Promise(resolve => setTimeout(resolve, GEMINI_MIN_INTERVAL_MS - timeSinceLast));
     }
+
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+    const geminiBody = JSON.stringify({
+      contents: [{ parts: [{ text: `${systemInstruction}\n\nUser Prompt: ${prompt}` }] }],
+      generationConfig: { temperature: 0.7, maxOutputTokens: 2048 }
+    });
+
+    try {
+      console.log(`Attempting LLM call via gemini-2.0-flash (timeout: ${timeoutMs}ms)...`);
+      lastGeminiCallTime = Date.now();
+
+      // Race the Gemini fetch against a timeout — no blocking waits on 429
+      const result = await Promise.race([
+        fetch(geminiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: geminiBody })
+          .then(async (res) => {
+            if (res.status === 429) {
+              gemini429Count++;
+              gemini429SkipUntil = Date.now() + 120000; // skip Gemini for 2 minutes after 3 429s
+              throw new Error('RATE_LIMIT_429');
+            }
+            if (!res.ok) throw new Error(`Gemini status ${res.status}`);
+            const data = await res.json();
+            gemini429Count = 0; // reset on success
+            return { provider: 'gemini', text: data.candidates[0].content.parts[0].text };
+          }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), timeoutMs))
+      ]);
+
+      return result;
+    } catch (err) {
+      if (err.message === 'RATE_LIMIT_429') {
+        console.warn(`Gemini 429 — going to fallback immediately (no retry block).`);
+      } else if (err.message === 'TIMEOUT') {
+        console.warn(`Gemini timed out after ${timeoutMs}ms — going to fallback.`);
+      } else {
+        console.warn(`Gemini failed: ${err.message}`);
+      }
+    }
+  } else if (skipGemini) {
+    console.warn(`Gemini skipped (${gemini429Count} recent 429s, cooling down). Using fallback.`);
   }
 
   // Try Groq fallback if key provided
@@ -283,7 +288,7 @@ async function queryLLMChain(prompt, systemInstruction = "") {
     }
   }
 
-  // If all API calls fail, return null to activate local fallback generator
+  // All providers failed — return null to activate local rich fallback
   return null;
 }
 
@@ -1053,7 +1058,7 @@ Return ONLY a valid JSON array (no markdown, no extra text, no code fences):
       math: "এটা গাণিতিক উপপাদ্য",
       history: "এটা ঐতিহাসিক ঘটনা",
       q_describe: "শ্ৰেণী {classLevel} {subject}ত \"{topic}\"ৰ বিষয়ত কোনটো শুদ্ধ?",
-      exp_describe: "\"{topic}\" শ্ৰေণী {classLevel} {subject}ৰ পাঠ্যক্ৰমৰ এক অপৰিহাৰ্য অংশ।",
+      exp_describe: "\"{topic}\" শ্ৰেণী {classLevel} {subject}ৰ পাঠ্যক্ৰমৰ এক অপৰিহাৰ্য অংশ।",
       whyStudy: "শ্ৰেণী {classLevel}ৰ শিক্ষাৰ্থীৰ বাবে \"{topic}\" কিয় গুৰুত্বপূৰ্ণ?",
       whyStudyCorrect: "ইয়াৰ মূল সূত্ৰ আৰু ব্যৱহাৰিক প্ৰয়োগসমূহ বুজিবলৈ",
       whyStudyW1: "অন্যান্য গুৰুত্বপূৰ্ণ অধ্যায়সমূহ এৰাই চলিবਲৈ",
@@ -1288,6 +1293,1256 @@ Return ONLY a valid JSON array (no markdown, no extra text, no code fences):
     difficulty: diff,
     numQuestions: nq
   });
+});
+
+// 3b. Smart Board Teaching Endpoint
+app.post('/api/learning/smart-board/teach', async (req, res) => {
+  const { topic, classLevel, language, region, subject, chapter, modes, followUpQuery, history } = req.body;
+
+  const cl = classLevel || 8;
+  const lang = language || 'en';
+  const actualTopic = topic || 'General Science';
+  const actualSubject = subject || 'Science';
+  const actualChapter = chapter || '';
+  const actualRegion = region || 'India';
+  const langName = LANG_NAMES[lang] || 'English';
+
+  const isSimplify = modes?.simplify || false;
+  const isVisualMode = modes?.visualMode || false;
+  const isExamPrep = modes?.examPrep || false;
+  const skillLevel = modes?.skillLevel || 'medium';
+
+  // Translation dictionary for diagrams across 22 official Indian languages
+  const DIAGRAM_TRANS = {
+    en: {
+      sunlight: "Sunlight",
+      sunlight_desc: "Energy absorbed by chlorophyll in leaves",
+      co2: "Carbon Dioxide",
+      co2_desc: "Absorbed by leaves from the atmosphere",
+      water: "Water (H2O)",
+      water_desc: "Absorbed by roots from the soil",
+      glucose_oxy: "Glucose & Oxygen",
+      glucose_oxy_desc: "Glucose for energy & Oxygen released",
+      nucleus: "Nucleus",
+      nucleus_desc: "Heavy positive center of the atom",
+      protons: "Protons (+)",
+      protons_desc: "Positive particles inside the nucleus",
+      neutrons: "Neutrons (0)",
+      neutrons_desc: "Neutral particles inside the nucleus",
+      electrons: "Electrons (-)",
+      electrons_desc: "Negative particles orbiting the nucleus",
+      numerator: "Numerator (a)",
+      numerator_desc: "Number of active/selected parts",
+      denominator: "Denominator (b)",
+      denominator_desc: "Total number of equal parts in the whole",
+      where_b_non_zero: "Where denominator b cannot be zero",
+      sun: "Sun (Center)",
+      sun_desc: "Main source of gravity and light",
+      inner_planets: "Terrestrial Planets",
+      inner_planets_desc: "Mercury, Venus, Earth, Mars (Rocky)",
+      outer_planets: "Gas Giants",
+      outer_planets_desc: "Jupiter, Saturn, Uranus, Neptune (Gas/Ice)",
+      definition: "Definition",
+      definition_desc: "Primary understanding of the concept",
+      mechanism: "Core Mechanism",
+      mechanism_desc: "How the mechanism operates step-by-step",
+      application: "Application",
+      application_desc: "Real-world utility and exams context",
+      diagram_title_photo: "Photosynthesis Process Cycle",
+      diagram_title_atom: "Atomic Structure Hierarchy",
+      diagram_title_frac: "Fraction Representation",
+      diagram_title_solar: "Solar System Orbital Cycle",
+      diagram_title_generic: "Topic Concept Flow"
+    },
+    hi: {
+      sunlight: "सूर्य का प्रकाश",
+      sunlight_desc: "पत्तियों में क्लोरोफिल द्वारा अवशोषित ऊर्जा",
+      co2: "कार्बन डाइऑक्साइड (CO2)",
+      co2_desc: "हवा से पत्तियों द्वारा सोखा गया",
+      water: "जल (H2O)",
+      water_desc: "जड़ों द्वारा मिट्टी से अवशोषित",
+      glucose_oxy: "ग्लूकोज और ऑक्सीजन",
+      glucose_oxy_desc: "ऊर्जा के लिए ग्लूकोज और सांस लेने के लिए ऑक्सीजन",
+      nucleus: "नाभिक (Nucleus)",
+      nucleus_desc: "परमाणु का भारी सकारात्मक केंद्र",
+      protons: "प्रोटॉन (+)",
+      protons_desc: "नाभिक के भीतर सकारात्मक कण",
+      neutrons: "न्यूट्रॉन (0)",
+      neutrons_desc: "नाभिक के भीतर तटस्थ कण",
+      electrons: "इलेक्ट्रॉन (-)",
+      electrons_desc: "नाभिक के बाहर परिक्रमा करने वाले नकारात्मक कण",
+      numerator: "अंश (Numerator)",
+      numerator_desc: "सक्रिय या चुने गए हिस्सों की संख्या",
+      denominator: "हर (Denominator)",
+      denominator_desc: "समान भागों की कुल संख्या",
+      where_b_non_zero: "जहां b शून्य नहीं हो सकता",
+      sun: "सूर्य (केंद्र)",
+      sun_desc: "गुरुत्वाकर्षण का मुख्य स्रोत",
+      inner_planets: "आंतरिक ग्रह",
+      inner_planets_desc: "बुध, शुक्र, पृथ्वी, मंगल (चट्टानी)",
+      outer_planets: "बाहरी ग्रह",
+      outer_planets_desc: "बृहस्पति, शनि, यूरेनस, नेपच्यून (गैस/बर्फ)",
+      definition: "परिभाषा",
+      definition_desc: "अवधारणा की मूल समझ",
+      mechanism: "मुख्य कार्य",
+      mechanism_desc: "यह कैसे काम करता है",
+      application: "अनुप्रयोग",
+      application_desc: "वास्तविक जीवन और परीक्षाओं में उपयोग",
+      diagram_title_photo: "प्रकाश संश्लेषण चक्र",
+      diagram_title_atom: "परमाणु की संरचना",
+      diagram_title_frac: "भिन्न का प्रतिनिधित्व",
+      diagram_title_solar: "सौर मंडल की कक्षाएं",
+      diagram_title_generic: "विषय प्रवाह"
+    },
+    bn: {
+      sunlight: "সূর্যের আলো",
+      sunlight_desc: "পাতার ক্লোরোফিল দ্বারা শোষিত শক্তি",
+      co2: "কার্বন ডাই অক্সাইড (CO2)",
+      co2_desc: "বাতাস থেকে পাতা দ্বারা শোষিত",
+      water: "জল (H2O)",
+      water_desc: "মূল দ্বারা মাটি থেকে শোষিত",
+      glucose_oxy: "গ্লুকোজ ও অক্সিজেন",
+      glucose_oxy_desc: "শক্তির জন্য গ্লুকোজ এবং শ্বাস নিতে অক্সিজেন",
+      nucleus: "নিউক্লিয়াস",
+      nucleus_desc: "পরমাণুর ভারী ধনাত্মক কেন্দ্র",
+      protons: "প্রোটন (+)",
+      protons_desc: "নিউক্লিয়াসের ভেতরের ধনাত্মক কণা",
+      neutrons: "নিউট্রন (0)",
+      neutrons_desc: "নিউক্লিয়াসের ভেতরের আধানহীন কণা",
+      electrons: "ইলেকট্রন (-)",
+      electrons_desc: "নিউক্লিয়াসের বাইরে ঘূর্ণায়মান ঋণাত্মক কণা",
+      numerator: "লব (Numerator)",
+      numerator_desc: "সক্রিয় বা নির্বাচিত অংশের সংখ্যা",
+      denominator: "হর (Denominator)",
+      denominator_desc: "মোট সমান অংশের সংখ্যা",
+      where_b_non_zero: "যেখানে হর শূন্য হতে পারে না",
+      sun: "সূর্য (কেন্দ্র)",
+      sun_desc: "মহাকর্ষের প্রধান উৎস",
+      inner_planets: "অভ্যন্তরীণ গ্রহ",
+      inner_planets_desc: "বুধ, শুক্র, পৃথিবী, মঙ্গল (পাথুরে)",
+      outer_planets: "বহিঃস্থ গ্রহ",
+      outer_planets_desc: "বৃহস্পতি, শনি, ইউরেনাস, নেপচুন (গ্যাসীয়)",
+      definition: "সংজ্ঞা",
+      definition_desc: "ধারণার প্রাথমিক বোঝাপড়া",
+      mechanism: "মূল প্রক্রিয়া",
+      mechanism_desc: "কীভাবে এটি ধাপে ধাপে কাজ করে",
+      application: "প্রয়োগ",
+      application_desc: "বাস্তব জীবন এবং পরীক্ষায় ব্যবহার",
+      diagram_title_photo: "সালোকসংশ্লেষ প্রক্রিয়া চক্র",
+      diagram_title_atom: "পরমাণু কাঠামোর অনুক্রম",
+      diagram_title_frac: "ভগ্নাংশ উপস্থাপন",
+      diagram_title_solar: "সৌরজগতের কক্ষপথ চক্র",
+      diagram_title_generic: "ধারণা প্রবাহ"
+    },
+    te: {
+      sunlight: "సూర్యరశ్మి",
+      sunlight_desc: "ఆకులలోని క్లోరోఫిల్ గ్రహించే శక్తి",
+      co2: "కార్బన్ డయాక్సైడ్ (CO2)",
+      co2_desc: "గాలి నుండి ఆకులు పీల్చుకునేది",
+      water: "నీరు (H2O)",
+      water_desc: "వేర్ల ద్వారా నేల నుండి పీల్చుకునేది",
+      glucose_oxy: "గ్లూకోజ్ & ఆక్సిజన్",
+      glucose_oxy_desc: "శక్తి కోసం గ్లూకోజ్ & విడుదలయ్యే ఆక్సిజన్",
+      nucleus: "కేంద్రకం",
+      nucleus_desc: "పరమాణువు యొక్క భారీ ధనాత్మక కేంద్రం",
+      protons: "ప్రోటాన్లు (+)",
+      protons_desc: "కేంద్రకం లోపల ఉండే ధనాత్మక కణాలు",
+      neutrons: "న్యూట్రాన్లు (0)",
+      neutrons_desc: "కేంద్రకం లోపల ఉండే తటస్థ కణాలు",
+      electrons: "ఎలక్ట్రాన్లు (-)",
+      electrons_desc: "కేంద్రకం చుట్టూ తిరిగే రుణాత్మక కణాలు",
+      numerator: "లవం (Numerator)",
+      numerator_desc: "ఎంపిక చేసుకున్న భాగాల సంఖ్య",
+      denominator: "హారం (Denominator)",
+      denominator_desc: "మొత్తం సమాన భాగాల సంఖ్య",
+      where_b_non_zero: "హారం సున్నా కాకూడదు",
+      sun: "సూర్యుడు (కేంద్రం)",
+      sun_desc: "గురుత్వాకర్షణకు ప్రధాన మూలం",
+      inner_planets: "అంతర్గత గ్రహాలు",
+      inner_planets_desc: "బుధుడు, శుక్రుడు, భూమి, అంగారకుడు",
+      outer_planets: "బాహ్య గ్రహాలు",
+      outer_planets_desc: "గురుడు, శని, యురేనస్, నెప్ట్యూన్",
+      definition: "నిర్వచనం",
+      definition_desc: "భావన యొక్క ప్రాథమిక అవగాహన",
+      mechanism: "ప్రధాన ప్రక్రియ",
+      mechanism_desc: "ఇది దశలవారీగా ఎలా పనిచేస్తుంది",
+      application: "అనువర్తనం",
+      application_desc: "నిజ జీవితంలో మరియు పరీక్షలలో ఉపయోగం",
+      diagram_title_photo: "కిరణజన్య సంయోగక్రియ చక్రం",
+      diagram_title_atom: "పరమాణు నిర్మాణం",
+      diagram_title_frac: "భిన్నం యొక్క ప్రాతినిధ్యం",
+      diagram_title_solar: "సౌర కుటుంబ కక్ష్యల చక్రం",
+      diagram_title_generic: "భావన ప్రవాహం"
+    },
+    mr: {
+      sunlight: "सूर्यप्रकाश",
+      sunlight_desc: "पानांमधील हरितद्रव्याद्वारे शोषलेली ऊर्जा",
+      co2: "कार्बन डायऑक्साइड (CO2)",
+      co2_desc: "हवेतून पानांद्वारे शोषलेला वायू",
+      water: "पाणी (H2O)",
+      water_desc: "मुळांद्वारे मातीतून शोषलेले पाणी",
+      glucose_oxy: "ग्लूकोज आणि ऑक्सिजन",
+      glucose_oxy_desc: "ऊर्जेसाठी ग्लूकोज आणि सोडलेला ऑक्सिजन",
+      nucleus: "केंद्रक (Nucleus)",
+      nucleus_desc: "अणूचा जड धनप्रभारित केंद्रभाग",
+      protons: "प्रोटॉन्स (+)",
+      protons_desc: "केंद्रकातील धनप्रभारित कण",
+      neutrons: "न्यूट्रॉन्स (0)",
+      neutrons_desc: "केंद्रकातील प्रभाररहित कण",
+      electrons: "इलेक्ट्रॉन्स (-)",
+      electrons_desc: "केंद्रकाबाहेर फिरणारे ऋणप्रभारित कण",
+      numerator: "अंश (Numerator)",
+      numerator_desc: "निवडलेल्या भागांची संख्या",
+      denominator: "छेद (Denominator)",
+      denominator_desc: "एकूण समान भागांची संख्या",
+      where_b_non_zero: "छेद शून्य नसावा",
+      sun: "सूर्य (केंद्र)",
+      sun_desc: "गुरुत्वाकर्षणाचा मुख्य स्रोत",
+      inner_planets: "आंतरिक ग्रह",
+      inner_planets_desc: "बुध, शुक्र, पृथ्वी, मंगळ (खडकयुक्त)",
+      outer_planets: "बाह्य ग्रह",
+      outer_planets_desc: "गुरु, शनी, युरेनस, नेप्ट्यून (वायूचे गोळे)",
+      definition: "व्याख्या",
+      definition_desc: "संकल्पनेची मूळ समज",
+      mechanism: "मुख्य कार्यपद्धती",
+      mechanism_desc: "हे टप्प्याटप्प्याने कसे कार्य करते",
+      application: "उपयोजन",
+      application_desc: "व्यावहारिक जीवन आणि परीक्षेत उपयोग",
+      diagram_title_photo: "प्रकाशसंश्लेषण प्रक्रिया चक्र",
+      diagram_title_atom: "अणू रचना श्रेणी",
+      diagram_title_frac: "अपूर्णांक सादरीकरण",
+      diagram_title_solar: "सौरमाला कक्षीय चक्र",
+      diagram_title_generic: "संकल्पना प्रवाह"
+    },
+    ta: {
+      sunlight: "சூரிய ஒளி",
+      sunlight_desc: "இலைகளில் உள்ள பச்சையத்தால் உறிஞ்சப்படும் ஆற்றல்",
+      co2: "கார்பன் டை ஆக்சைடு (CO2)",
+      co2_desc: "காற்றிலிருந்து இலைகளால் உறிஞ்சப்படுகிறது",
+      water: "நீர் (H2O)",
+      water_desc: "வேர்களால் மண்ணிலிருந்து உறிஞ்சப்படுகிறது",
+      glucose_oxy: "குளுக்கோஸ் & ஆக்சிஜன்",
+      glucose_oxy_desc: "ஆற்றலுக்கான குளுக்கோஸ் & வெளியாகும் ஆக்சிஜன்",
+      nucleus: "உட்கரு",
+      nucleus_desc: "அணுவின் மையப்பகுதி",
+      protons: "புரோட்டான்கள் (+)",
+      protons_desc: "உட்கருவினுள் உள்ள நேர்மின் துகள்கள்",
+      neutrons: "நியூட்ரான்கள் (0)",
+      neutrons_desc: "உட்கருவினுள் உள்ள மின்சுமையற்ற துகள்கள்",
+      electrons: "எலக்ட்ரான்கள் (-)",
+      electrons_desc: "உட்கருவைச் சுற்றிவரும் எதிர்மின் துகள்கள்",
+      numerator: "தொகுதி (Numerator)",
+      numerator_desc: "தேர்ந்தெடுக்கப்பட்ட சம பாகங்களின் எண்ணிக்கை",
+      denominator: "பகுதி (Denominator)",
+      denominator_desc: "மொத்த சம பாகங்களின் எண்ணிக்கை",
+      where_b_non_zero: "பகுதி பூஜ்ஜியமாக இருக்கக்கூடாது",
+      sun: "சூரியன் (மையம்)",
+      sun_desc: "ஈர்ப்பு விசையின் முதன்மை ஆதாரம்",
+      inner_planets: "உள் கோள்கள்",
+      inner_planets_desc: "புதன், வெள்ளி, பூமி, செவ்வாய்",
+      outer_planets: "வெளி கோள்கள்",
+      outer_planets_desc: "வியாழன், சனி, யுரேனஸ், நெப்டியூன்",
+      definition: "வரையறை",
+      definition_desc: "கருத்தின் அடிப்படை புரிதல்",
+      mechanism: "முக்கிய செயல்முறை",
+      mechanism_desc: "இது எவ்வாறு இயங்குகிறது",
+      application: "பயன்பாடு",
+      application_desc: "நடைமுறை வாழ்க்கை மற்றும் தேர்வுகளில் பயன்பாடு",
+      diagram_title_photo: "ஒளிச்சேர்க்கை செயல்முறை சுழற்சி",
+      diagram_title_atom: "அணு அமைப்பு வரிசைமுறை",
+      diagram_title_frac: "பின்னத்தின் வடிவம்",
+      diagram_title_solar: "சூரிய குடும்ப சுழற்சி",
+      diagram_title_generic: "கருத்து ஓட்டம்"
+    },
+    gu: {
+      sunlight: "સૂર્યપ્રકાશ",
+      sunlight_desc: "પાંદડામાં ક્લોરોફિલ દ્વારા શોષાયેલી ઉર્જા",
+      co2: "કાર્બન ડાયોક્સાઇડ (CO2)",
+      co2_desc: "હવામાનમાંથી પાંદડા દ્વારા શોષાય છે",
+      water: "પાણી (H2O)",
+      water_desc: "મૂળ દ્વારા જમીનમાંથી શોષાય છે",
+      glucose_oxy: "ગ્લુકોઝ અને ઓક્સિજન",
+      glucose_oxy_desc: "ઉર્જા માટે ગ્લુકોઝ અને મુક્ત થતો ઓક્સિજન",
+      nucleus: "ન્યુક્લિયસ (કેન્દ્ર)",
+      nucleus_desc: "પરમાણુનું ભારે ધનભારિત કેન્દ્ર",
+      protons: "પ્રોટોન (+)",
+      protons_desc: "કેન્દ્રમાં રહેલા ધનકણો",
+      neutrons: "ન્યુટ્રોન (0)",
+      neutrons_desc: "કેન્દ્રમાં રહેલા તટસ્થ કણો",
+      electrons: "ઇલેક્ટ્રોન (-)",
+      electrons_desc: "કેન્દ્રની બહાર ફરતા ઋણકણો",
+      numerator: "અંશ (Numerator)",
+      numerator_desc: "પસંદ કરેલા ભાગોની સંખ્યા",
+      denominator: "છેદ (Denominator)",
+      denominator_desc: "કુલ સમાન ભાગોની સંખ્યા",
+      where_b_non_zero: "છેદ શૂન્ય હોઈ શકે નહીં",
+      sun: "સૂર્ય (કેન્દ્ર)",
+      sun_desc: "ગુરુત્વાકર્ષણનો મુખ્ય સ્ત્રોત",
+      inner_planets: "આંતરિક ગ્રહો",
+      inner_planets_desc: "બુધ, શુક્ર, પૃથ્વી, મંગળ",
+      outer_planets: "બાહ્ય ગ્રહો",
+      outer_planets_desc: "ગુરુ, શનિ, યુરેનસ, નેપ્ચ્યુન",
+      definition: "વ્યાખ્યા",
+      definition_desc: "ખ્યાલની મૂળભૂત સમજ",
+      mechanism: "મુખ્ય પ્રક્રિયા",
+      mechanism_desc: "તે કેવી રીતે કાર્ય કરે છે",
+      application: "ઉપયોગીતા",
+      application_desc: "વાસ્તવિક જીવન અને પરીક્ષામાં ઉપયોગ",
+      diagram_title_photo: "પ્રકાશ સંશ્લેષણ પ્રક્રિયા ચક્ર",
+      diagram_title_atom: "પરમાણુ બંધારણ શ્રેણી",
+      diagram_title_frac: "અપૂર્ણાંક નિરૂપણ",
+      diagram_title_solar: "સૌરમંડળ ભ્રમણકક્ષા ચક્ર",
+      diagram_title_generic: "વિભાવના પ્રવાહ"
+    },
+    ur: {
+      sunlight: "سورج کی روشنی",
+      sunlight_desc: "پتوں میں کلوروفیل کے ذریعے جذب شدہ توانائی",
+      co2: "کاربن ڈائی آکسائیڈ (CO2)",
+      co2_desc: "ہوا سے پتوں کے ذریعے جذب کی گئی",
+      water: "پانی (H2O)",
+      water_desc: "جڑوں کے ذریعے مٹی سے جذب کیا گیا",
+      glucose_oxy: "گلوکوز اور آکسیجن",
+      glucose_oxy_desc: "توانائی کے لیے گلوکوز اور آکسیجن کا اخراج",
+      nucleus: "مرکزہ (Nucleus)",
+      nucleus_desc: "جوہر کا بھاری مثبت مرکز",
+      protons: "پروٹان (+)",
+      protons_desc: "مرکزے کے اندر مثبت ذرات",
+      neutrons: "نیوٹران (0)",
+      neutrons_desc: "مرکزے کے اندر غیر جانبدار ذرات",
+      electrons: "الیکٹران (-)",
+      electrons_desc: "مرکزے کے باہر گردش کرنے والے منفی ذرات",
+      numerator: "شمار کنندہ (Numerator)",
+      numerator_desc: "منتخب کردہ حصوں کی تعداد",
+      denominator: "نسب نما (Denominator)",
+      denominator_desc: "کل برابر حصوں کی تعداد",
+      where_b_non_zero: "مخرج مخرج صفر نہیں ہو سکتا",
+      sun: "سورج (مرکز)",
+      sun_desc: "کشش ثقل کا بنیادی ذریعہ",
+      inner_planets: "اندرونی سیارے",
+      inner_planets_desc: "عطارد، زہرہ، زمین، مریخ",
+      outer_planets: "بیرونی سیارے",
+      outer_planets_desc: "مشتری، زحل، یورینس، نیپچون",
+      definition: "تعریف",
+      definition_desc: "تصور کی بنیادی سمجھ",
+      mechanism: "بنیادی عمل",
+      mechanism_desc: "یہ مرحلہ وار کیسے کام کرتا ہے",
+      application: "اطلاق",
+      application_desc: "عملی زندگی اور امتحانات میں استعمال",
+      diagram_title_photo: "روشنی کی ترکیب کا عمل",
+      diagram_title_atom: "جوہر کی ساخت",
+      diagram_title_frac: "کسر کی نمائندگی",
+      diagram_title_solar: "نظام شمسی کا مدار",
+      diagram_title_generic: "تصور کا بہاؤ"
+    },
+    kn: {
+      sunlight: "ಸೂರ್ಯನ ಬೆಳಕು",
+      sunlight_desc: "ಎಲೆಗಳಲ್ಲಿರುವ ಪತ್ರಹರಿತ್ತಿನಿಂದ ಹೀರಿಕೊಳ್ಳಲ್ಪಟ್ಟ ಶಕ್ತಿ",
+      co2: "ಕಾರ್ಬನ್ ಡೈಆಕ್ಸೈಡ್ (CO2)",
+      co2_desc: "ಗಾಳಿಯಿಂದ ಎಲೆಗಳು ಹೀರಿಕೊಳ್ಳುತ್ತವೆ",
+      water: "ನೀರು (H2O)",
+      water_desc: "ಬೇರುಗಳ ಮೂಲಕ ಮಣ್ಣಿನಿಂದ ಹೀರಿಕೊಳ್ಳಲ್ಪಡುತ್ತದೆ",
+      glucose_oxy: "ಗ್ಲೂಕೋಸ್ ಮತ್ತು ಆಕ್ಸಿಜನ್",
+      glucose_oxy_desc: "ಶಕ್ತಿಗಾಗಿ ಗ್ಲೂಕೋಸ್ ಮತ್ತು ಬಿಡುಗಡೆಯಾಗುವ ಆಕ್ಸಿಜನ್",
+      nucleus: "ಪರಮಾಣು ಕೇಂದ್ರ",
+      nucleus_desc: "ಪರಮಾಣುವಿನ ಭಾರವಾದ ಧನವಿದ್ಯುತ್ ಕೇಂದ್ರ",
+      protons: "ಪ್ರೋಟಾನ್ಗಳು (+)",
+      protons_desc: "ಕೇಂದ್ರದ ಒಳಗಿರುವ ಧನಕಣಗಳು",
+      neutrons: "ನ್ಯೂಟ್ರಾನ್ಗಳು (0)",
+      neutrons_desc: "ಕೇಂದ್ರದ ಒಳಗಿರುವ ತಟಸ್ಥಕಣಗಳು",
+      electrons: "ಎಲೆಕ್ಟ್ರಾನ್ಗಳು (-)",
+      electrons_desc: "ಕೇಂದ್ರದ ಹೊರಗೆ ಸುತ್ತುವ ಋಣಕಣಗಳು",
+      numerator: "ಅಂಶ (Numerator)",
+      numerator_desc: "ಆಯ್ಕೆಮಾಡಿದ ಭಾಗಗಳ ಸಂಖ್ಯೆ",
+      denominator: "ಛೇದ (Denominator)",
+      denominator_desc: "ಒಟ್ಟು ಸಮಾನ ಭಾಗಗಳ ಸಂಖ್ಯೆ",
+      where_b_non_zero: "ಛೇದವು ಶೂನ್ಯವಾಗಿರಬಾರದು",
+      sun: "ಸೂರ್ಯ (ಕೇಂದ್ರ)",
+      sun_desc: "ಗುರುತ್ವಾਕਰಷಣೆಯ ಪ್ರಮುಖ ಮೂಲ",
+      inner_planets: "ಆಂತರಿಕ ಗ್ರಹಗಳು",
+      inner_planets_desc: "ಬುಧ, ಶುಕ್ರ, ಭೂಮಿ, ಮಂಗಳ",
+      outer_planets: "ಬಾಹ್ಯ ಗ್ರಹಗಳು",
+      outer_planets_desc: "ಗುರು, ಶನಿ, ಯುರೇನಸ್, ನೆಪ್ಚೂನ್",
+      definition: "ವ್ಯಾಖ್ಯೆ",
+      definition_desc: "ಪರಿಕಲ್ಪನೆಯ ಪ್ರಾಥಮಿಕ ತಿಳುವಳಿಕೆ",
+      mechanism: "ಮುಖ್ಯ ಕಾರ್ಯವಿಧಾನ",
+      mechanism_desc: "ಇದು ಹಂತ ಹಂತವಾಗಿ ಹೇಗೆ ಕೆಲಸ ಮಾಡುತ್ತದೆ",
+      application: "ಅನ್ವಯ",
+      application_desc: "ನಿಜ ಜೀವನ ಮತ್ತು ಪರೀಕ್ಷೆಗಳಲ್ಲಿ ಬಳಕೆ",
+      diagram_title_photo: "ದ್ಯುತಿಸំಶ್ಲೇಷಣೆಯ ಕ್ರಿಯೆಯ ಚಕ್ರ",
+      diagram_title_atom: "ಪರಮಾಣು ರಚನೆ",
+      diagram_title_frac: "ಭಿನ್ನರಾಶಿಯ ಪ್ರಾತಿನಿಧ್ಯ",
+      diagram_title_solar: "ಸೌರಮಂಡಲದ ಕಕ್ಷೆಗಳ ಚಕ್ರ",
+      diagram_title_generic: "ಪರಿಕಲ್ಪನೆಯ ಹರಿವು"
+    },
+    ml: {
+      sunlight: "സൂര്യപ്രകാശം",
+      sunlight_desc: "ഇലകളിലെ ഹരിതകം ആഗിരണം ചെയ്യുന്ന ഊർജ്ജം",
+      co2: "കാർബൺ ഡയോക്സൈഡ് (CO2)",
+      co2_desc: "അന്തരീക്ഷത്തിൽ നിന്ന് ഇലകൾ ആഗിരണം ചെയ്യുന്നത്",
+      water: "വെള്ളം (H2O)",
+      water_desc: "വേരുകൾ മണ്ണിൽ നിന്ന് ആഗിരണം ചെയ്യുന്നത്",
+      glucose_oxy: "ഗ്ലൂക്കോസ് & ഓക്സിജൻ",
+      glucose_oxy_desc: "ഊർജ്ജത്തിനായി ഗ്ലൂക്കോസ് & പുറത്തുവിടുന്ന ഓക്സിജൻ",
+      nucleus: "ന്യൂക്ലിയസ്",
+      nucleus_desc: "ആറ്റത്തിന്റെ പോസിറ്റീവ് കേന്ദ്രഭാഗം",
+      protons: "പ്രോട്ടോണുകൾ (+)",
+      protons_desc: "ന്യൂക്ലിയസിനുള്ളിലെ പോസിറ്റീവ് കണങ്ങൾ",
+      neutrons: "ന്യൂട്രോണുകൾ (0)",
+      neutrons_desc: "ന്യൂക്ലിയസിനുള്ളിലെ ചാർജില്ലാത്ത കണങ്ങൾ",
+      electrons: "ഇലക്ട്രോണുകൾ (-)",
+      electrons_desc: "ന്യൂക്ലിയസിന് പുറത്തു വലംവെക്കുന്ന നെഗറ്റീവ് കണങ്ങൾ",
+      numerator: "അംശം (Numerator)",
+      numerator_desc: "തിരഞ്ഞെടുത്ത ഭാഗങ്ങളുടെ എണ്ണം",
+      denominator: "ഛേദം (Denominator)",
+      denominator_desc: "ആകെ തുല്യ ഭാഗങ്ങളുടെ എണ്ണം",
+      where_b_non_zero: "ഛേദം പൂജ്യം ആകരുത്",
+      sun: "സൂര്യൻ (കേന്ദ്രം)",
+      sun_desc: "ഗുരുത്യാകർഷണത്തിന്റെ പ്രധാന സ്രോതസ്സ്",
+      inner_planets: "ആന്തരിക ഗ്രഹങ്ങൾ",
+      inner_planets_desc: "ബുധൻ, ശുക്രൻ, ഭൂമി, ചൊവ്വ",
+      outer_planets: "ബാഹ്യ ഗ്രഹങ്ങൾ",
+      outer_planets_desc: "വ്യാഴം, ശനി, യുറാനസ്, നെപ്റ്റ്യൂൺ",
+      definition: "നിർവചനം",
+      definition_desc: "ആശയത്തിന്റെ അടിസ്ഥാനപരമായ അറിവ്",
+      mechanism: "പ്രധാന പ്രക്രിയ",
+      mechanism_desc: "ഇത് എങ്ങനെ പ്രവർത്തിക്കുന്നു",
+      application: "പ്രായോഗികത",
+      application_desc: "യഥാർത്ഥ ജീവിതത്തിലും പരീക്ഷകളിലും ഉപയോഗം",
+      diagram_title_photo: "പ്രകാശസംശ്ലേഷണ പ്രക്രിയയുടെ ചക്രം",
+      diagram_title_atom: "ആറ്റത്തിന്റെ ഘടന",
+      diagram_title_frac: "ഭിന്നസംഖ്യാ രൂപം",
+      diagram_title_solar: "സൗരയൂഥത്തിന്റെ ഭ്രമണപഥ ചക്രം",
+      diagram_title_generic: "ആശയ വിനിമയം"
+    },
+    pa: {
+      sunlight: "ਸੂਰਜ ਦੀ ਰੌਸ਼ਨੀ",
+      sunlight_desc: "ਪੱਤਿਆਂ ਵਿੱਚ ਕਲੋਰੋਫਿਲ ਦੁਆਰਾ ਸੋਖੀ ਗਈ ਊਰਜਾ",
+      co2: "ਕਾਰਬਨ ਡਾਈਆਕਸਾਈਡ (CO2)",
+      co2_desc: "ਹਵਾ ਤੋਂ ਪੱਤਿਆਂ ਦੁਆਰਾ ਸੋਖਿਆ ਗਿਆ",
+      water: "ਪਾਣੀ (H2O)",
+      water_desc: "ਜੜ੍ਹਾਂ ਦੁਆਰਾ ਮਿੱਟੀ ਤੋਂ ਸੋਖਿਆ ਗਿਆ",
+      glucose_oxy: "ਗਲੂਕੋਜ਼ ਅਤੇ ਆਕਸੀਜਨ",
+      glucose_oxy_desc: "ਊਰਜਾ ਲਈ ਗਲੂਕੋਜ਼ ਅਤੇ ਸਾਹ ਲੈਣ ਲਈ ਆਕਸੀਜਨ",
+      nucleus: "ਨਿਊਕਲੀਅਸ (ਕੇਂਦਰ)",
+      nucleus_desc: "ਪਰਮਾਣੂ ਦਾ ਭਾਰੀ ਸਕਾਰਾਤਮਕ ਕੇਂਦਰ",
+      protons: "ਪ੍ਰੋਟੋਨ (+)",
+      protons_desc: "ਨਿਊਕਲੀਅਸ ਦੇ ਅੰਦਰ ਸਕਾਰਾਤਮਕ ਕਣ",
+      neutrons: "ਨਿਊਟਰੋਨ (0)",
+      neutrons_desc: "ਨਿਊਕਲੀਅਸ ਦੇ ਅੰਦਰ ਨਿਰਪੱਖ ਕਣ",
+      electrons: "ਇਲੈਕਟ੍ਰੋਨ (-)",
+      electrons_desc: "ਨਿਊਕਲੀਅਸ ਦੇ ਬਾਹਰ ਚੱਕਰ ਲਗਾਉਣ ਵਾਲੇ ਨਕਾਰਾਤਮਕ ਕਣ",
+      numerator: "ਅੰਸ਼ (Numerator)",
+      numerator_desc: "ਚੁਣੇ ਗਏ ਹਿੱਸਿਆਂ ਦੀ ਗਿਣਤੀ",
+      denominator: "ਹਰ (Denominator)",
+      denominator_desc: "ਕੁੱਲ ਬਰਾਬਰ ਹਿੱਸਿਆਂ ਦੀ ਗਿਣਤੀ",
+      where_b_non_zero: "ਹਰ ਜ਼ੀਰੋ ਨਹੀਂ ਹੋ ਸਕਦਾ",
+      sun: "ਸੂਰਜ (ਕੇਂਦਰ)",
+      sun_desc: "ਗੁਰੂਤਾਕਰਸ਼ਣ ਦਾ ਮੁੱਖ ਸਰੋਤ",
+      inner_planets: "ਅੰਦਰੂਨੀ ਗ੍ਰਹਿ",
+      inner_planets_desc: "ਬੁੱਧ, ਸ਼ੁੱਕਰ, ਧਰਤੀ, ਮੰਗਲ (ਪੱਥਰੀਲੇ)",
+      outer_planets: "ਬਾਹਰੀ ਗ੍ਰਹਿ",
+      outer_planets_desc: "ਬ੍ਰਹਿਸਪਤ, ਸ਼ਨੀ, ਯੂਰੇਨਸ, ਨੈਪਚਿਊਨ",
+      definition: "ਪਰਿਭਾਸ਼ਾ",
+      definition_desc: "ਸੰਕਲਪ ਦੀ ਬੁਨਿਆਦੀ ਸਮਝ",
+      mechanism: "ਮੁੱਖ ਕਾਰਜ ਪ੍ਰਣਾਲੀ",
+      mechanism_desc: "ਇਹ ਕਿਵੇਂ ਕੰਮ ਕਰਦਾ ਹੈ",
+      application: "ਵਿਹਾਰਕ ਵਰਤੋਂ",
+      application_desc: "ਅਸਲ ਜ਼ਿੰਦਗੀ ਅਤੇ ਪ੍ਰੀਖਿਆਵਾਂ ਵਿੱਚ ਵਰਤੋਂ",
+      diagram_title_photo: "ਪ੍ਰਕਾਸ਼ ਸੰਸ਼ਲੇਸ਼ਣ ਚੱਕਰ",
+      diagram_title_atom: "ਪਰਮਾਣੂ ਦੀ ਸੰਰਚਨਾ",
+      diagram_title_frac: "ਭਿੰਨ ਦੀ ਪੇਸ਼ਕਾਰੀ",
+      diagram_title_solar: "ਸੂਰਜੀ ਮੰਡਲ ਦੇ ਪੰਧ",
+      diagram_title_generic: "ਸੰਕਲਪ ਪ੍ਰਵਾਹ"
+    },
+    or: {
+      sunlight: "ସୂର୍ଯ୍ୟ କିରଣ",
+      sunlight_desc: "ପତ୍ରରେ କ୍ଲୋରୋଫିଲ୍ ଦ୍ୱାରା ଶୋଷିତ ଶକ୍ତି",
+      co2: "ଅଙ୍ଗାରକାମ୍ଳ (CO2)",
+      co2_desc: "ବାୟୁମଣ୍ଡଳରୁ ପତ୍ର ଦ୍ୱାରା ଶୋଷିତ",
+      water: "ଜଳ (H2O)",
+      water_desc: "ଚେର ଦ୍ୱାରା ମାଟିରୁ ଶୋଷିତ",
+      glucose_oxy: "ଗ୍ଲୁକୋଜ୍ ଏବଂ ଅମ୍ଳଜାନ",
+      glucose_oxy_desc: "ଶକ୍ତି ପାଇଁ ଗ୍ଲୁକୋଜ୍ ଏବଂ ନିର୍ଗତ ଅମ୍ଳଜାନ",
+      nucleus: "ନାଭି (Nucleus)",
+      nucleus_desc: "ପରମାଣୁର କେନ୍ଦ୍ର ଭାଗ",
+      protons: "ପ୍ରୋଟୋନ୍ (+)",
+      protons_desc: "ନାଭି ଭିତରେ ଥିବା ଧନାତ୍ମକ କଣିକା",
+      neutrons: "ନିଉଟ୍ରୋନ୍ (0)",
+      neutrons_desc: "ନାଭି ଭିତରେ ଥିବା ଚାର്ଜହୀନ କଣିକା",
+      electrons: "ଇଲେକ୍ଟ୍ରୋନ୍ (-)",
+      electrons_desc: "ନାଭି ଚାରିପଟେ ବୁଲୁଥିବା ଋଣାତ୍ମକ କଣିକା",
+      numerator: "ଲବ (Numerator)",
+      numerator_desc: "ନିଆଯାଇଥିବା ଭାଗ ସଂଖ୍ୟା",
+      denominator: "ହର (Denominator)",
+      denominator_desc: "ମୋଟ ସମାନ ଭାଗ ସଂଖ୍ୟା",
+      where_b_non_zero: "ହର ଶୂନ ହୋଇପାରିବ ନାହିଁ",
+      sun: "ସୂର୍ଯ୍ୟ (କେନ୍ଦ୍ର)",
+      sun_desc: "ମଧ୍ୟାକର୍ଷଣର ମୁଖ୍ୟ ଉତ୍ସ",
+      inner_planets: "ଆଭ୍ୟନ୍ତରୀଣ ଗ୍ରହ",
+      inner_planets_desc: "ବୁଧ, ଶୁକ୍ର, ପୃଥିବୀ, ମଙ୍ଗଳ",
+      outer_planets: "ବାହ୍ୟ ଗ୍ରହ",
+      outer_planets_desc: "ବୃହସ୍ପତି, ଶନି, ୟୁରେନସ, ନେପଚୁନ",
+      definition: "ସଂଜ୍ଞା",
+      definition_desc: "ଧାରଣାର ପ୍ରାଥମିକ ବୁଝାମଣା",
+      mechanism: "ମୁଖ୍ୟ ପ୍ରକ୍ରିୟା",
+      mechanism_desc: "ଏହା କିପରି କାମ କରେ",
+      application: "ପ୍ରୟୋଗ",
+      application_desc: "ବାସ୍ତବ ଜୀବନ ଓ ପରୀକ୍ଷାରେ ବ୍ୟବହାର",
+      diagram_title_photo: "ଆଲୋକଶ୍ଳେଷଣ ପ୍ରକ୍ରିୟା ଚକ୍ର",
+      diagram_title_atom: "ପରମାಣୁ ସଂରଚନା",
+      diagram_title_frac: "ଭଗ୍ନାଂଶର ପ୍ରତିନିଧିତ୍ୱ",
+      diagram_title_solar: "ସୌରଜଗତ କକ୍ଷପଥ ଚକ୍ର",
+      diagram_title_generic: "ଧାରଣା ପ୍ରବାହ"
+    },
+    as: {
+      sunlight: "সূৰ্যৰ পোহৰ",
+      sunlight_desc: "পাতৰ ক্ল’ৰ’ফিলে শোষণ কৰা শক্তি",
+      co2: "কাৰ্বন ডাই অক্সাইড (CO2)",
+      co2_desc: "বায়ুমণ্ডলৰ পৰা পাতে শোষণ কৰা গেছ",
+      water: "পানী (H2O)",
+      water_desc: "শিপাই মাটিৰ পৰা শোষণ কৰা পানী",
+      glucose_oxy: "গ্লুক’জ আৰু অক্সিজেন",
+      glucose_oxy_desc: "শক্তিৰ বাবে গ্লুক’জ আৰু এৰি দিয়া অক্সিজেন",
+      nucleus: "নিউক্লিয়াছ",
+      nucleus_desc: "পৰমাণুৰ কেন্দ্ৰভাগ",
+      protons: "প্ৰ’টন (+)",
+      protons_desc: "কেন্দ্ৰত থকা ধনাত্মক কণা",
+      neutrons: "নিউটন (0)",
+      neutrons_desc: "কেন্দ্ৰত থকা আধানহীন কণা",
+      electrons: "ইলেকট্ৰন (-)",
+      electrons_desc: "কেন্দ্ৰৰ বাহিৰত ঘূৰি থকা ঋণাত্মক কণা",
+      numerator: "লৱ (Numerator)",
+      numerator_desc: "বাচনি কৰা অংশৰ সংখ্যা",
+      denominator: "হৰ (Denominator)",
+      denominator_desc: "মুঠ সমান অংশৰ সংখ্যা",
+      where_b_non_zero: "হৰ কেতিয়াও শূন্য হ’ব নোৱাৰে",
+      sun: "সূৰ্য (কেন্দ্ৰ)",
+      sun_desc: "মহাকৰ্ষণৰ মূল উৎস",
+      inner_planets: "অভ্যন্তৰীণ গ্ৰহ",
+      inner_planets_desc: "বুধ, শুক্ৰ, পৃথিৱী, মঙ্গল",
+      outer_planets: "বাহ্যিক গ্ৰহ",
+      outer_planets_desc: "বৃহস্পতি, শনি, ইউৰেনাচ, নেপচুন",
+      definition: "সংজ্ঞা",
+      definition_desc: "ধাৰণাৰ প্ৰাথমিক বুজাবুজি",
+      mechanism: "মূল প্ৰক্ৰিয়া",
+      mechanism_desc: "ই কেনেকৈ কাম কৰে",
+      application: "প্ৰয়োগ",
+      application_desc: "বাস্তৱ জীৱন আৰু পৰীক্ষাত ব্যৱহাৰ",
+      diagram_title_photo: "সালোক সংশ্লেষণ চক্ৰ",
+      diagram_title_atom: "পৰমাণুৰ গঠন",
+      diagram_title_frac: "ভগ্নাংশৰ প্ৰতিনিধিত্ব",
+      diagram_title_solar: "সৌৰজগতৰ কক্ষপথ চক্ৰ",
+      diagram_title_generic: "ধাৰণা প্ৰবাহ"
+    },
+    sa: {
+      sunlight: "सूर्यप्रकाशः",
+      sunlight_desc: "पर्णेषु हरितद्रव्येण शोषितम् ऊर्जा",
+      co2: "अङ्गाराम्लवायुः (CO2)",
+      co2_desc: "वातावरणात् पर्णैः शोषितः",
+      water: "जलम् (H2O)",
+      water_desc: "मूलैः मृत्तिकायाः शोषितम्",
+      glucose_oxy: "ग्लूकोजः प्राणवायुः च",
+      glucose_oxy_desc: "ऊर्जायै ग्लूकोजः प्राणवायुविसर्गः च",
+      nucleus: "नाभिकः",
+      nucleus_desc: "परमाणोः दृढः धनभारयुक्तः केन्द्रभागः",
+      protons: "प्रोटॉन (+)",
+      protons_desc: "नाभिके धनभारकणाः",
+      neutrons: "न्यूट्रॉन (0)",
+      neutrons_desc: "नाभिके उदासीनकणाः",
+      electrons: "इलेक्ट्रॉन (-)",
+      electrons_desc: "नाभिकं परितः भ्रमन्तः ऋणभारकणाः",
+      numerator: "अंशः",
+      numerator_desc: "चितानां भागानां संख्या",
+      denominator: "हरः",
+      denominator_desc: "एकत्र कल्पितानां भागानां संख्या",
+      where_b_non_zero: "हरः शून्यं भवितुं नार्हति",
+      sun: "सूर्यः (केन्द्रम्)",
+      sun_desc: "गुरुत्वाकर्षणस्य मुख्यः स्रोतः",
+      inner_planets: "आन्तरिकग्रहाः",
+      inner_planets_desc: "बुधः, शुक्रः, पृथिवी, मङ्गलः",
+      outer_planets: "बाह्यग्रहाः",
+      outer_planets_desc: "बृहस्पतिः, शनिः, अरुणः, वरुणः",
+      definition: "परिभाषा",
+      definition_desc: "सिद्धान्तस्य मूलज्ञानम्",
+      mechanism: "मुख्यकार्यविधिः",
+      mechanism_desc: "कथम् एतत् सोपानशः कार्यं करोति",
+      application: "प्रयोगः",
+      application_desc: "व्यावहारिकजीवने परीक्षासु च उपयोगः",
+      diagram_title_photo: "प्रकाशसंश्लेषणचक्रम्",
+      diagram_title_atom: "परमाणुसंरचनाश्रेणी",
+      diagram_title_frac: "भिन्ननिरूपणम्",
+      diagram_title_solar: "सौरमण्डलपरिक्रमाचक्रम्",
+      diagram_title_generic: "सिद्धान्तप्रवाहः"
+    }
+  };
+
+  // Translation helper for diagram elements
+  const getDiagTrans = (key) => {
+    let activeLang = lang;
+    if (!DIAGRAM_TRANS[activeLang]) {
+      if (['ne', 'kok', 'doi', 'brx', 'mai'].includes(activeLang)) activeLang = 'hi';
+      else if (['ks', 'sd'].includes(activeLang)) activeLang = 'ur';
+      else if (activeLang === 'mni') activeLang = 'bn';
+      else activeLang = 'en';
+    }
+    const dict = DIAGRAM_TRANS[activeLang] || DIAGRAM_TRANS.en;
+    return dict[key] || DIAGRAM_TRANS.en[key];
+  };
+
+  const getFallbackDiagram = (topicName) => {
+    const norm = topicName.toLowerCase();
+    if (norm.includes('photosynthesis')) {
+      return {
+        type: 'cycle',
+        title: getDiagTrans('diagram_title_photo'),
+        elements: [
+          { label: getDiagTrans('sunlight'), desc: getDiagTrans('sunlight_desc') },
+          { label: getDiagTrans('co2'), desc: getDiagTrans('co2_desc') },
+          { label: getDiagTrans('water'), desc: getDiagTrans('water_desc') },
+          { label: getDiagTrans('glucose_oxy'), desc: getDiagTrans('glucose_oxy_desc') }
+        ]
+      };
+    } else if (norm.includes('atom')) {
+      return {
+        type: 'hierarchy',
+        title: getDiagTrans('diagram_title_atom'),
+        elements: [
+          { label: getDiagTrans('nucleus'), desc: getDiagTrans('nucleus_desc') },
+          { label: getDiagTrans('protons'), desc: getDiagTrans('protons_desc') },
+          { label: getDiagTrans('neutrons'), desc: getDiagTrans('neutrons_desc') },
+          { label: getDiagTrans('electrons'), desc: getDiagTrans('electrons_desc') }
+        ]
+      };
+    } else if (norm.includes('fraction')) {
+      return {
+        type: 'formula',
+        title: getDiagTrans('diagram_title_frac'),
+        elements: [
+          { label: getDiagTrans('numerator'), desc: getDiagTrans('numerator_desc') },
+          { label: getDiagTrans('denominator'), desc: getDiagTrans('denominator_desc') },
+          { label: 'a / b', desc: getDiagTrans('where_b_non_zero') }
+        ]
+      };
+    } else if (norm.includes('solar') || norm.includes('system')) {
+      return {
+        type: 'cycle',
+        title: getDiagTrans('diagram_title_solar'),
+        elements: [
+          { label: getDiagTrans('sun'), desc: getDiagTrans('sun_desc') },
+          { label: getDiagTrans('inner_planets'), desc: getDiagTrans('inner_planets_desc') },
+          { label: getDiagTrans('outer_planets'), desc: getDiagTrans('outer_planets_desc') }
+        ]
+      };
+    } else {
+      return {
+        type: 'flowchart',
+        title: getDiagTrans('diagram_title_generic'),
+        elements: [
+          { label: getDiagTrans('definition'), desc: getDiagTrans('definition_desc') },
+          { label: getDiagTrans('mechanism'), desc: getDiagTrans('mechanism_desc') },
+          { label: getDiagTrans('application'), desc: getDiagTrans('application_desc') }
+        ]
+      };
+    }
+  };
+
+  // Translation dictionary for offline lessons across 22 official Indian languages
+  const OFFLINE_TRANS = {
+    en: {
+      classWord: "Class",
+      explanation: "This interactive lesson on {topic} is loaded in offline/simulation fallback mode. It covers the core NCERT syllabus points standardly taught at this grade level. Use internet connectivity to dynamically fetch AI streaming board content in all 22 Indian languages.",
+      kp1: "Core NCERT guidelines for {topic}",
+      kp2: "Typical board exam questions for Class {cl}",
+      kp3: "Practical applications and experiments",
+      ex1: "Standard classroom demonstration and diagrams",
+      ex2: "Relatable textbook examples",
+      summary: "Understanding {topic} is essential to master the foundations of {subject}."
+    },
+    hi: {
+      classWord: "कक्षा",
+      explanation: "यह {topic} पर इंटरैक्टिव पाठ ऑफ़लाइन/सिमुलेशन मोड में लोड किया गया है। यह इस कक्षा स्तर पर मानक रूप से पढ़ाए जाने वाले प्रमुख एनसीईआरटी पाठ्यक्रम बिंदुओं को शामिल करता है। सभी 22 भारतीय भाषाओं में एआई-संचालित लाइव फलक सामग्री प्राप्त करने के लिए इंटरनेट से जुड़ें।",
+      kp1: "अवधारणा के बुनियादी नियम और सिद्धांत",
+      kp2: "कक्षा {cl} के लिए महत्वपूर्ण परीक्षा प्रश्न",
+      kp3: "व्यावहारिक अनुप्रयोग और प्रयोग",
+      ex1: "कक्षा में मानक प्रदर्शन और चित्र",
+      ex2: "पाठ्यपुस्तक के उदाहरण और व्यावहारिक उदाहरण",
+      summary: "विषय की बेहतर समझ के लिए {topic} का बुनियादी ज्ञान आवश्यक है।"
+    },
+    bn: {
+      classWord: "শ্রেণি",
+      explanation: "এই {topic} বিষয়ক ইন্টারঅ্যাক্টিভ পাঠটি অফলাইন/সিমুলেশন মোডে লোড করা হয়েছে। এটি এই শ্রেণির স্তরে মানক এনসিইআরটি (NCERT) পাঠ্যসূচির মূল পয়েন্টগুলি কভার করে। ২২টি ভারতীয় ভাষায় এআই-চালিত লাইভ বোর্ড কনটেন্ট পেতে ইন্টারনেটের সাথে যুক্ত হোন।",
+      kp1: "ধারণার মৌলিক নিয়ম ও তত্ত্ব",
+      kp2: "শ্রেণি {cl}-এর জন্য গুরুত্বপূর্ণ পরীক্ষার প্রশ্ন",
+      kp3: "ব্যবহারিক প্রয়োগ ও পরীক্ষা-নিরীক্ষা",
+      ex1: "শ্রেণীকক্ষে মানক প্রদর্শন এবং চিত্র",
+      ex2: "পাঠ্যপুস্তকের উদাহরণ এবং বাস্তব প্রয়োগ",
+      summary: "বিষয়টি আরও ভালভাবে বোঝার জন্য {topic} এর প্রাথমিক জ্ঞান অপরিহার্য।"
+    },
+    te: {
+      classWord: "తరగతి",
+      explanation: "ఈ {topic} ఇంటరాక్టివ్ పాఠం ఆఫ్ లైన్/సిమ్యులేషన్ మోడ్‌లో లోడ్ చేయబడింది. ఇది ఈ తరగతి స్థాయిలో ప్రామాణికంగా బోధించే ఎన్‌సిఇఆర్‌టి (NCERT) పాఠ్యప్రణాళికా ముఖ్యాంశాలను కలిగి ఉంది. అన్ని 22 భారతీయ భాషల్లో AI ఆధారిత లైవ్ బోర్డ్ కంటెంట్ పొందడానికి ఇంటర్నెట్‌తో కనెక్ట్ అవ్వండి.",
+      kp1: "భావన యొక్క ప్రాథమిక నియమాలు మరియు సిద్ధాంతాలు",
+      kp2: "తరగతి {cl} కొరకు ముఖ్యమైన పరీక్షా ప్రశ్నలు",
+      kp3: "ఆచరణాత్మక అనువర్తనాలు మరియు ప్రయోగాలు",
+      ex1: "తరగతి గదిలో ప్రామాణిక ప్రదర్శన మరియు రేఖాచిత్రాలు",
+      ex2: "పాఠ్యపుస్తక ఉదాహరణలు మరియు నిజ జీవిత అనువర్తనం",
+      summary: "విషయాన్ని బాగా అర్థం చేసుకోవడానికి {topic} యొక్క ప్రాథమిక జ్ఞానం అవసరం."
+    },
+    mr: {
+      classWord: "इयत्ता",
+      explanation: "हा {topic} वरील परस्परसंवादी पाठ ऑफलाइन/सिम्युलेशन मोडमध्ये लोड केला गेला आहे. यामध्ये या इयत्तेत शिकवल्या जाणाऱ्या प्रमुख एनसीईआरटी (NCERT) अभ्यासक्रमाचे मुद्दे समाविष्ट आहेत. सर्व २२ भारतीय भाषांमध्ये एआय-चालित लाइव्ह बोर्ड सामग्री मिळविण्यासाठी इंटरनेटशी कनेक्ट व्हा.",
+      kp1: "संकल्पनेचे मूलभूत नियम आणि सिद्धांत",
+      kp2: "इयत्ता {cl} साठी महत्त्वाचे परीक्षा प्रश्न",
+      kp3: "व्यावहारिक उपयोजन आणि प्रयोग",
+      ex1: "वर्गातील मानक प्रात्यक्षिक आणि आकृती",
+      ex2: "पाठ्यपुस्तकातील उदाहरणे आणि व्यावहारिक संदर्भ",
+      summary: "विषयाची चांगली समज मिळवण्यासाठी {topic} चे मूलभूत ज्ञान आवश्यक आहे।"
+    },
+    ta: {
+      classWord: "வகுப்பு",
+      explanation: "இந்த {topic} ஊடாடும் பாடம் ஆஃப்லைன்/சிமுலேஷன் பயன்முறையில் ஏற்றப்பட்டுள்ளது. இது இந்த வகுப்பு மட்டத்தில் பொதுவாக கற்பிக்கப்படும் முக்கிய என்சிஇஆர்டி (NCERT) பாடத்திட்ட புள்ளிகளை உள்ளடக்கியது. அனைத்து 22 இந்திய மொழிகளிலும் AI-இயங்கும் நேரடி போர்டு உள்ளடக்கத்தைப் பெற இணையத்துடன் இணைக்கவும்.",
+      kp1: "கருத்தின் அடிப்படை விதிகள் மற்றும் கோட்பாடுகள்",
+      kp2: "வகுப்பு {cl}-க்கான முக்கிய தேர்வு கேள்விகள்",
+      kp3: "நடைமுறை பயன்பாடுகள் மற்றும் சோதனைகள்",
+      ex1: "வகுப்பறை நிலையான செய்முறை விளக்கம் மற்றும் வரைபடங்கள்",
+      ex2: "பாடப்புத்தக உதாரணங்கள் மற்றும் நடைமுறை பயன்பாடுகள்",
+      summary: "{topic} பற்றிய அடிப்படை அறிவு விஷயத்தை நன்றாகப் புரிந்துகொள்வதற்கு அவசியமாகும்."
+    },
+    gu: {
+      classWord: "ધોરણ",
+      explanation: "આ {topic} પરનો ઇન્ટરેક્ટિવ પાઠ ઑફલાઇન/સિમ્યુલેશન મોડમાં લોડ થયો છે. તે આ ધોરણ સ્તરે સામાન્ય રીતે ભણાવવામાં આવતા મુખ્ય એનસીઇઆરટી (NCERT) અભ्याસક્રમના મુદ્દાઓ આવરી લે છે. બધી 22 ભારતીય ભાષાઓમાં એઆઇ-સંચાલિત લાઇવ બોર્ડ સામગ્રી મેળવવા માટે ઇન્ટરનેટ સાથે જોડાઓ.",
+      kp1: "સંકલ્પનાના મૂળભૂત નિયમો અને સિદ્ધાંતો",
+      kp2: "ધોરણ {cl} માટે મહત્વના પરીક્ષા પ્રશ્નો",
+      kp3: "વ્યવહારિક પ્રયોગો અને ઉપયોગો",
+      ex1: "વર્ગખંડમાં સામાન્ય નિદર્શન અને આકૃતિઓ",
+      ex2: "પાઠયપુસ્તકના ઉદાહરણો અને પ્રાદેશિક સંદર્ભો",
+      summary: "વિષયની સારી સમજ માટે {topic} નું મૂળભૂત જ્ઞાન જરૂરી છે."
+    },
+    ur: {
+      classWord: "کلاس",
+      explanation: "یہ {topic} کا انٹرایکٹو سبق آف لائن/سیمولیشن موڈ میں لوڈ کیا گیا ہے۔ یہ اس کلاس لیول پر پڑھائے جانے والے اہم این سی ای آر ٹی (NCERT) نصابی نکات کا احاطہ کرتا ہے۔ تمام 22 ہندوستانی زبانوں میں AI سے چلنے والا لائیو بورڈ مواد حاصل کرنے کے لیے انٹرنیٹ سے جڑیں۔",
+      kp1: "تصور کے بنیادی قوانین اور اصول",
+      kp2: "کلاس {cl} کے لیے اہم امتحانی سوالات",
+      kp3: "عملی تجربات اور اطلاقات",
+      ex1: "کلاس میں معیاری مظاہرہ اور ڈایاگرام",
+      ex2: "درسی کتاب کی مثالیں اور حقیقی زندگی کے استعمال",
+      summary: "مضمون کی بہتر تفہیم کے لیے {topic} کی بنیادی معلومات ضروری ہیں۔"
+    },
+    kn: {
+      classWord: "ತರಗತಿ",
+      explanation: "ಈ {topic} ಸಂವಾದಾತ್ಮಕ ಪಾಠವನ್ನು ಆಫ್‌ಲೈನ್/ಸಿಮ್ಯುಲೇಶನ್ ಮೋಡ್‌ನಲ್ಲಿ ಲೋಡ್ ಮಾಡಲಾಗಿದೆ. ಇದು ಈ ತರಗತಿ ಮಟ್ಟದಲ್ಲಿ ಬೋಧಿಸುವ ಪ್ರಮುಖ ಎನ್‌ಸಿಇಆರ್‌ಟಿ (NCERT) ಪಠ್ಯಕ್ರಮದ ಅಂಶಗಳನ್ನು ಒಳಗೊಂಡಿದೆ. ಎಲ್ಲಾ 22 ಭಾರತೀಯ ಭಾಷೆಗಳಲ್ಲಿ AI ಚಾಲಿತ ಲೈವ್ ಬೋರ್ಡ್ ವಿಷಯವನ್ನು ಪಡೆಯಲು ಇಂಟರ್ನೆಟ್‌ಗೆ ಸಂಪರ್ಕಪಡಿಸಿ.",
+      kp1: "ಪರಿಕಲ್ಪನೆಯ ಮೂಲ ನಿಯಮಗಳು ಮತ್ತು ಸಿದ್ಧಾಂತಗಳು",
+      kp2: "ತರಗತಿ {cl} ಗಾಗಿ ಪ್ರಮುಖ ಪರೀಕ್ಷಾ ಪ್ರಶ್ನೆಗಳು",
+      kp3: "ಪ್ರಾಯೋಗಿಕ ಪ್ರಯೋಗಗಳು ಮತ್ತು ಅನ್ವಯಗಳು",
+      ex1: "ತರಗತಿಯಲ್ಲಿ ಪ್ರಮಾಣಿತ ಪ್ರದರ್ಶನ ಮತ್ತು ರೇಖಾಚಿತ್ರಗಳು",
+      ex2: "ಪಠ್ಯಪುಸ್ತಕದ ಉದಾಹರಣೆಗಳು ಮತ್ತು ನಿಜ ಜೀವನದ ವಿವರಣೆಗಳು",
+      summary: "ವಿಷಯವನ್ನು ಚೆನ್ನಾಗಿ ಅರ್ಥಮಾಡಿಕೊಳ್ಳಲು {topic} ನ ಮೂಲಭೂತ ಜ್ಞಾನ ಅತ್ಯಗತ್ಯ."
+    },
+    ml: {
+      classWord: "ക്ലാസ്",
+      explanation: "ഈ {topic} സംവേദനാത്മക പാഠം ഓഫ്‌ലൈൻ/സിമുലേഷൻ മോഡിൽ ലോഡ് ചെയ്തിരിക്കുന്നു. ഇത് ഈ ക്ലാസ് തലത്തിൽ പഠിപ്പിക്കുന്ന പ്രധാന എൻസിഇആർടി (NCERT) സിലബസ് പോയിന്റുകൾ ഉൾക്കൊള്ളുന്നു. എല്ലാ 22 ഇന്ത്യൻ ഭാഷകളിലും AI-അധിഷ്ഠിത തത്സമയ ബോർഡ് ഉള്ളടക്കം ലഭിക്കുന്നതിന് ഇൻ്റർനെറ്റിലേക്ക് കണക്ട് ചെയ്യുക.",
+      kp1: "ആശയത്തിൻ്റെ അടിസ്ഥാന നിയമങ്ങളും സിദ്ധാന്തങ്ങളും",
+      kp2: "ക്ലാസ് {cl}-നായുള്ള പ്രധാന പരീക്ഷാ ചോദ്യങ്ങൾ",
+      kp3: "പ്രായോഗിക പരീക്ഷണങ്ങളും പ്രയോഗങ്ങളും",
+      ex1: "ക്ലാസ് മുറിയിലെ സാധാരണ പ്രദർശനവും ഡയഗ്രമുകളും",
+      ex2: "പാഠപുസ്തക ഉദാഹരണങ്ങളും നിത്യജീവിത ഉദാഹരണങ്ങളും",
+      summary: "വിഷയം നന്നായി മനസ്സിലാക്കുന്നതിന് {topic} കുറിച്ചുള്ള അടിസ്ഥാന അറിവ് ആവശ്യമാണ്."
+    },
+    pa: {
+      classWord: "ਕਲਾਸ",
+      explanation: "ਇਹ {topic} ਦਾ ਇੰਟਰਐਕਟਿਵ ਪਾਠ ਔਫਲਾਈਨ/ਸਿਮੂਲੇਸ਼ਨ ਮੋਡ ਵਿੱਚ ਲੋਡ ਕੀਤਾ ਗਿਆ ਹੈ। ਇਹ ਇਸ ਕਲਾਸ ਪੱਧਰ 'ਤੇ ਪੜ੍ਹਾਏ ਜਾਣ ਵਾਲੇ ਮੁੱਖ NCERT ਪਾਠਕ੍ਰਮ ਦੇ ਨੁਕਤਿਆਂ ਨੂੰ ਕਵਰ ਕਰਦਾ ਹੈ। ਸਾਰੀਆਂ 22 ਭਾਰਤੀ ਭਾਸ਼ਾਵਾਂ ਵਿੱਚ AI-ਸੰਚਾਲਿਤ ਲਾਈਵ ਬੋਰਡ ਸਮੱਗਰੀ ਪ੍ਰਾਪਤ ਕਰਨ ਲਈ ਇੰਟਰਨੈੱਟ ਨਾਲ ਜੁੜੋ।",
+      kp1: "ਸੰਕਲਪ ਦੇ ਬੁਨਿਆਦੀ ਨਿਯਮ ਅਤੇ ਸਿਧਾਂਤ",
+      kp2: "ਕਲਾਸ {cl} ਲਈ ਮਹੱਤਵਪੂਰਨ ਪ੍ਰੀਖਿਆ ਪ੍ਰਸ਼ਨ",
+      kp3: "ਵਿਹਾਰਕ ਕਾਰਜ ਅਤੇ ਪ੍ਰਯੋਗ",
+      ex1: "ਜਮਾਤ ਵਿੱਚ ਮਿਆਰੀ ਪ੍ਰਦਰਸ਼ਨ ਅਤੇ ਚਿੱਤਰ",
+      ex2: "ਪਾਠ ਪੁਸਤਕ ਦੀਆਂ ਉਦਾਹਰਣਾਂ ਅਤੇ ਅਸਲ ਉਦਾਹਰਣਾਂ",
+      summary: "ਵਿਸ਼ੇ ਦੀ ਬਿਹਤਰ ਸਮਝ ਲਈ {topic} ਦਾ ਬੁਨਿਆਦੀ ਗਿਆਨ ਜ਼ਰੂਰੀ ਹੈ।"
+    },
+    or: {
+      classWord: "ଶ୍ରେଣୀ",
+      explanation: "ଏହି {topic} ଇଣ୍ଟରାକ୍ଟିଭ୍ ପାଠ୍ୟଟି ଅଫଲାଇନ/ସିମୁଲେସନ୍ ମୋଡରେ ଲୋଡ୍ ହୋଇଛି। ଏହା ଏହି ଶ୍ରେଣୀ ସ୍ତରରେ ଶିକ୍ଷା ଦିଆଯାଉଥିବା ପ୍ରମୁଖ NCERT ପାଠ୍ୟକ୍ରମର ବିନ୍ଦୁଗୁଡ଼ିକୁ କଭର କରେ। ସମସ୍ତ ୨୨ଟି ଭାରତୀୟ ଭାଷାରେ AI-ଚାଳିତ ଲାଇଭ୍ ବୋର୍ଡ ବିଷୟବସ୍ତୁ ପାଇଁ ଇଣ୍ଟରନେଟ୍ ସଂଯୋਗ କରନ୍ତୁ।",
+      kp1: "ଧାରଣାର ମୌଳିକ ନିୟମ ଓ ସିଦ୍ଧାନ୍ତ",
+      kp2: "ଶ୍ରେଣୀ {cl} ପାଇଁ ଗୁରୁତ୍ୱପୂର୍ଣ୍ଣ ପରୀକ୍ଷା ପ୍ରଶ୍ନ",
+      kp3: "ବ୍ୟାବହାରିକ ପ୍ରୟୋଗ ଓ ପରୀକ୍ଷଣ",
+      ex1: "ଶ୍ରେଣୀରେ ସାଧାରଣ ପ୍ରଦର୍ଶନ ଏବଂ ଚିତ୍ର",
+      ex2: "ପାଠ୍ୟପୁସ୍ତକ ଉଦାହରଣ ଏବଂ ବାସ୍ତବ ଜୀବନର ଉଦାହରଣ",
+      summary: "ବିଷୟଟିକୁ ଭଲ ଭାବରେ ବୁଝିବା ପାଇଁ {topic} ର ମୌଳିକ ଜ୍ଞାନ ଆବଶ୍ୟକ।"
+    },
+    as: {
+      classWord: "শ্ৰেণী",
+      explanation: "এই {topic} বিষয়ক ইন্টাৰেক্টিভ পাঠটো অফলাইন/চিমুলেচন মোডত লোড কৰা হৈছে। ই এই শ্ৰেণী স্তৰৰ মানক NCERT পাঠ্যক্ৰমৰ মূল দিশসমূহ সামৰি লৈছে। আটাইকেইটা ২২টা ভাৰতীয় ভাষাত AI-চালিত লাইভ বোৰ্ডৰ তথ্য লাভ কৰিবলৈ ইণ্টাৰনেটৰ সৈতে সংযোগ কৰক।",
+      kp1: "ধাৰণাটোৰ মৌলিক নিয়ম আৰু সিদ্ধান্তসমূহ",
+      kp2: "শ্ৰেণী {cl}ৰ বাবে গুৰুত্বপূৰ্ণ পৰীক্ষাৰ প্ৰশ্ন",
+      kp3: "ব্যৱহাৰিক প্ৰয়োগ আৰু পৰীক্ষাসমূহ",
+      ex1: "শ্ৰেণীকোঠাৰ সাধাৰণ প্ৰদৰ্শন আৰু চিত্ৰসমূহ",
+      ex2: "পাঠ্যপুথিৰ উদাহৰণসমূহ আৰু বাস্তৱ ক্ষেত্ৰৰ উদাহৰণ",
+      summary: "বিষয়টো ভালদৰে বুজিবলৈ {topic}ৰ মৌলিক জ্ঞান অপৰিহাৰ্য।"
+    },
+    sa: {
+      classWord: "कक्षा",
+      explanation: "अयं {topic} विषयकः संवादात्मकः पाठः ऑफलाइन/सिमुलेशन-विधिना लोड जातः अस्ति। एषः अस्मिन् कक्षास्तरे पठ्यमानस्य मुख्य-NCERT-पाठ्यक्रमस्य बिन्दून् आवृणोति। सर्वासु २२ भारतीयभाषासु एआई-द्वारा सञ्चालितं सजीवं फलकं प्राप्तुं अन्तर्जालं संयोजयन्तु।",
+      kp1: "अवधारणायाः मूलाः नियमाः सिद्धान्ताः च",
+      kp2: "कक्षा {cl} कृते महत्वपूर्णाः परीक्षाप्रश्नाः",
+      kp3: "व्यावहारिकप्रयोगाः परीक्षाश्च",
+      ex1: "कक्षायां मानकप्रदर्शनं चित्राणि च",
+      ex2: "पाठ्यपुस्तकस्य उदाहरणानि व्यावहारिकसन्दर्भाः च",
+      summary: "विषयस्य सम्यक् अवबोधाय {topic} विषयकस्य प्राथमिकज्ञानस्य आवश्यकता वर्तते।"
+    }
+  };
+
+  const getLocalizedOffline = (activeLanguage, topicTitle, grade, subName) => {
+    let activeLang = activeLanguage;
+    if (!OFFLINE_TRANS[activeLang]) {
+      if (['ne', 'kok', 'doi', 'brx', 'mai'].includes(activeLang)) activeLang = 'hi';
+      else if (['ks', 'sd'].includes(activeLang)) activeLang = 'ur';
+      else if (activeLang === 'mni') activeLang = 'bn';
+      else activeLang = 'en';
+    }
+
+    const trans = OFFLINE_TRANS[activeLang] || OFFLINE_TRANS.en;
+    
+    const replacePlaceholders = (str) => {
+      return str
+        .replace(/{topic}/g, topicTitle)
+        .replace(/{cl}/g, grade)
+        .replace(/{subject}/g, subName);
+    };
+
+    return {
+      title: `${topicTitle} (${trans.classWord} ${grade} ${subName})`,
+      explanation: replacePlaceholders(trans.explanation),
+      keyPoints: [
+        replacePlaceholders(trans.kp1),
+        replacePlaceholders(trans.kp2),
+        replacePlaceholders(trans.kp3)
+      ],
+      examples: [
+        replacePlaceholders(trans.ex1),
+        replacePlaceholders(trans.ex2)
+      ],
+      summary: replacePlaceholders(trans.summary)
+    };
+  };
+
+  const systemPrompt = `You are Vidya AI, an expert teacher assistant for Indian schools, guiding an interactive AI Smart Board.
+Topic: "${actualTopic}"
+Subject: "${actualSubject}"
+Chapter: "${actualChapter}"
+Class Level: Class ${cl}
+Language: ${langName}
+Region: ${actualRegion}
+
+Selected Modes:
+- Simplify Explanation: ${isSimplify ? 'Yes, explain using extremely simple language, metaphors and rural-relatable analogies.' : 'No, standard curriculum explanations.'}
+- Visual Learning Mode: ${isVisualMode ? 'Yes, focus heavily on structural representations and create a detailed visual diagram layout.' : 'No.'}
+- Exam Preparation Mode: ${isExamPrep ? 'Yes, highlight typical board exam questions, key terms, definitions, and grading tips.' : 'No.'}
+- Student Skill Level: ${skillLevel} (Beginner: slow pace, intermediate: normal, advanced: deep-dive).
+
+${followUpQuery ? `The user has asked this follow-up query: "${followUpQuery}". Adjust the explanation to answer this question while maintaining the context of the lesson.` : ''}
+
+CRITICAL LANGUAGE INSTRUCTION: Every single word of your response MUST be in ${langName}. Do NOT use English unless English is the selected language. Use the appropriate regional script.
+
+Return ONLY valid JSON (no markdown code blocks, no ticks, no surrounding text):
+{
+  "title": "Topic or Query Title in ${langName}",
+  "explanation": "Detailed explanation matching the selected modes and language, written in ${langName}",
+  "keyPoints": ["Point 1 in ${langName}", "Point 2 in ${langName}", "Point 3 in ${langName}"],
+  "examples": ["Example 1 in ${langName}", "Example 2 in ${langName}"],
+  "diagram": {
+    "type": "flowchart | cycle | hierarchy | formula",
+    "title": "Diagram Title in ${langName}",
+    "elements": [
+      { "label": "Label in ${langName}", "desc": "Description in ${langName}" }
+    ]
+  },
+  "summary": "One sentence summary in ${langName}"
+}
+`;
+
+  const response = await queryLLMChain(`SmartBoard:${actualTopic}:${langName}`, systemPrompt);
+  if (response) {
+    try {
+      let cleanText = response.text.trim();
+      if (cleanText.startsWith('```json')) cleanText = cleanText.slice(7);
+      if (cleanText.startsWith('```')) cleanText = cleanText.slice(3);
+      if (cleanText.endsWith('```')) cleanText = cleanText.slice(0, -3);
+      const parsed = JSON.parse(cleanText.trim());
+      if (parsed.title && parsed.explanation) {
+        return res.json({ success: true, provider: response.provider, ...parsed });
+      }
+    } catch (e) {
+      console.error("Failed to parse dynamic Smart Board response:", e);
+    }
+  }
+
+  // Offline/simulation fallback
+  const diagram = getFallbackDiagram(actualTopic);
+  const fall = getLocalizedOffline(lang, actualTopic, cl, actualSubject);
+
+  res.json({
+    success: true,
+    provider: 'local_fallback',
+    title: fall.title,
+    explanation: fall.explanation,
+    keyPoints: fall.keyPoints,
+    examples: fall.examples,
+    diagram: diagram,
+    summary: fall.summary
+  });
+});
+
+// ── VOICE CLASS SLIDES ENDPOINT ──────────────────────────────────────────────
+// Returns 5-6 structured theory slides (no random content, pure NCERT theory)
+app.post('/api/learning/voice-class/slides', async (req, res) => {
+  const { topic, classLevel, language, subject, chapter } = req.body;
+  const lang = language || 'en';
+  const langName = LANG_NAMES[lang] || 'English';
+  const cl = classLevel || 8;
+  const actualTopic = topic || 'Photosynthesis';
+  const actualSubject = subject || 'Science';
+  const actualChapter = chapter || '';
+
+  // ── Rich topic-aware fallback slides (theory only) ─────────────────────────
+  const buildFallbackSlides = (topicName, grade, sub, lang) => {
+    const topicLower = topicName.toLowerCase();
+
+    // Topic-specific rich theory content (English base, translated concept structure)
+    const topicKnowledge = {
+      photosynthesis: {
+        slides: [
+          { heading: 'What is Photosynthesis?', body: `Photosynthesis is the process by which green plants, algae and some bacteria prepare their own food using sunlight, water and carbon dioxide. It is the most important biochemical process that sustains life on Earth. The word "Photosynthesis" comes from Greek: "Photo" means light and "Synthesis" means to put together.` },
+          { heading: 'The Chemical Equation', body: `The overall chemical equation for photosynthesis is:\n\n6CO₂ + 6H₂O + Light Energy → C₆H₁₂O₆ + 6O₂\n\nThis means: Six molecules of Carbon Dioxide + Six molecules of Water, in the presence of sunlight, produce one molecule of Glucose (food) and six molecules of Oxygen. The oxygen is released into the atmosphere, which all living beings breathe.` },
+          { heading: 'Where Does Photosynthesis Occur?', body: `Photosynthesis takes place inside the Chloroplasts — special organelles found in plant cells. Within the chloroplast, there is a green pigment called Chlorophyll. Chlorophyll is responsible for capturing the sunlight needed to drive the photosynthesis reaction. Leaves are the primary site of photosynthesis because they are flat (maximising surface area) and contain the most chlorophyll.` },
+          { heading: 'Raw Materials Needed', body: `Three things are essential for photosynthesis:\n\n1. Carbon Dioxide (CO₂) — Absorbed from the air through tiny pores in leaves called Stomata.\n2. Water (H₂O) — Absorbed from the soil through the roots and transported up the stem via the Xylem vessels.\n3. Sunlight (Light Energy) — Absorbed by the Chlorophyll pigment in the chloroplasts.\n\nWithout any one of these three, photosynthesis cannot occur.` },
+          { heading: 'Products of Photosynthesis', body: `Photosynthesis produces two important products:\n\n1. Glucose (C₆H₁₂O₆) — This is the food (chemical energy) stored by the plant. It is used for respiration to release energy, or converted into starch for storage, or used to build cell walls and other compounds.\n\n2. Oxygen (O₂) — Released as a by-product through the stomata back into the atmosphere. This is the oxygen that all animals, including humans, breathe to survive.` },
+          { heading: 'Factors Affecting Photosynthesis', body: `The rate of photosynthesis depends on several environmental factors:\n\n1. Light Intensity — More light increases the rate (up to a limit).\n2. Carbon Dioxide Concentration — More CO₂ speeds up the reaction.\n3. Temperature — Enzymes work best at optimal temperature (around 25–35°C for most plants).\n4. Water Availability — Shortage of water closes stomata, slowing down gas exchange and the reaction.\n\nFarmers use this knowledge to grow crops in greenhouses where they can control these conditions.` },
+          { heading: 'Importance of Photosynthesis', body: `Photosynthesis is vital for life on Earth for several reasons:\n\n1. Food Production — It is the foundation of almost all food chains. Plants make food which feeds herbivores, which in turn feed carnivores.\n2. Oxygen Production — It replenishes the oxygen in our atmosphere that we breathe.\n3. Carbon Dioxide Removal — It removes CO₂ from the atmosphere, helping regulate the climate and reducing the greenhouse effect.\n4. Fossil Fuels — Coal, petroleum and natural gas are stored forms of solar energy captured by ancient plants through photosynthesis millions of years ago.` }
+        ]
+      },
+      'agricultural implements': {
+        slides: [
+          { heading: 'What are Agricultural Implements?', body: `Agricultural implements are tools, equipment and machines used by farmers to perform various operations in farming. These implements make farm work easier, faster and more efficient. From ancient times, farmers have used simple tools like ploughs and sickles. Today, modern machines like tractors and harvesters have transformed agriculture.` },
+          { heading: 'Classification of Agricultural Implements', body: `Agricultural implements are broadly classified based on the type of farm operation they perform:\n\n1. Tillage Implements — Used for ploughing and preparing the soil (e.g., Plough, Harrow, Cultivator)\n2. Sowing Implements — Used to plant seeds in the soil (e.g., Seed Drill)\n3. Irrigation Implements — Used for watering crops (e.g., Pumps, Sprinklers)\n4. Harvesting Implements — Used to cut and collect mature crops (e.g., Sickle, Combine Harvester)\n5. Threshing Implements — Used to separate grain from the harvested plant (e.g., Thresher)` },
+          { heading: 'Traditional Tillage Implements', body: `Traditional implements used for tilling (preparing) the soil include:\n\n1. Plough (Hala) — The most ancient tool. Used to loosen and turn over the topsoil before sowing. Made of wood or iron. Animal-drawn ploughs are still used in many Indian villages.\n2. Hoe — A simple tool used for removing weeds and loosening the soil between plants.\n3. Cultivator — A blade-fitted implement drawn by bullocks or tractors to break up clods, remove weeds, and aerate the soil.` },
+          { heading: 'Modern Agricultural Machinery', body: `Modern implements powered by engines and tractors have revolutionised farming:\n\n1. Tractor — The main power unit on modern farms. It pulls or drives all other implements.\n2. Seed Drill — Sows seeds at uniform depth and spacing, improving germination rates and saving seed.\n3. Combine Harvester — Performs reaping, threshing and winnowing in a single machine pass over the field.\n4. Power Tiller — A two-wheeled tractor used for small farms and hilly terrains.\n5. Sprinkler System — Sprays water over crops like rainfall, saving water compared to flood irrigation.` },
+          { heading: 'Sowing and Irrigation Implements', body: `Proper sowing and irrigation are crucial for crop success:\n\nSowing Implements:\n• Traditional Seed Drill — Wooden or iron tube attached behind a plough to drop seeds as soil is tilled.\n• Modern Seed Drill — Mechanised, attached to a tractor, sows seeds at precise depth and spacing.\n\nIrrigation Implements:\n• Persian Wheel (Rahat) — Animal-powered water-lifting device used in northern India.\n• Pump Sets — Electric or diesel pumps that lift water from wells or rivers to irrigate fields.\n• Drip Irrigation System — Delivers water directly to plant roots through pipes, saving up to 60% water.` },
+          { heading: 'Harvesting and Post-Harvest Implements', body: `Harvesting and processing crops requires specific implements:\n\nHarvesting:\n• Sickle — A C-shaped blade on a wooden handle. The most common hand tool for cutting grain crops like wheat and rice.\n• Reaper — A machine that cuts standing crops and lays them in rows for collection.\n\nPost-Harvest:\n• Thresher — Separates grain from the stalk and husk.\n• Winnowing Fan — A flat tray used to separate lighter husk from grain by throwing it in the air.\n• Combine Harvester — Does reaping, threshing and winnowing all at once, saving time and labour.` }
+        ]
+      }
+    };
+
+    // Find matching topic knowledge
+    for (const key of Object.keys(topicKnowledge)) {
+      if (topicLower.includes(key) || key.includes(topicLower.split(' ')[0])) {
+        const knowledge = topicKnowledge[key];
+        return knowledge.slides.map((s, i) => ({
+          slideNumber: i + 1,
+          heading: s.heading,
+          content: s.body,
+          type: i === 0 ? 'intro' : i === knowledge.slides.length - 1 ? 'summary' : 'theory'
+        }));
+      }
+    }
+
+    // Generic theory slides for any topic
+    return [
+      {
+        slideNumber: 1, type: 'intro',
+        heading: `Introduction to ${topicName}`,
+        content: `${topicName} is an important concept studied in Class ${grade} ${sub}. It is part of the standard NCERT curriculum and forms the foundation for understanding advanced topics in the subject. This topic helps students connect theoretical knowledge with real-world observations and applications. Mastering ${topicName} is essential for board examinations and higher education in the field of ${sub}.`
+      },
+      {
+        slideNumber: 2, type: 'theory',
+        heading: `Definition and Meaning of ${topicName}`,
+        content: `${topicName} can be defined as a fundamental concept in ${sub} that explains how certain processes or phenomena occur in nature or in scientific contexts. The term originates from scientific study and observation. At the Class ${grade} level, students are introduced to the basic principles of ${topicName} as described in the NCERT textbook, building a clear conceptual understanding before moving to advanced applications.`
+      },
+      {
+        slideNumber: 3, type: 'theory',
+        heading: `Core Theory of ${topicName}`,
+        content: `The theoretical framework of ${topicName} involves several interconnected principles:\n\n1. The concept operates based on fundamental laws of ${sub}.\n2. Key variables and factors influence how ${topicName} behaves under different conditions.\n3. Scientific observations and experiments have established the accepted theory over time.\n4. NCERT describes ${topicName} using clear definitions, diagrams, and step-by-step explanations suitable for Class ${grade} students.\n\nUnderstanding these principles forms the core of this chapter.`
+      },
+      {
+        slideNumber: 4, type: 'theory',
+        heading: `Types and Classification`,
+        content: `${topicName} can be classified into different categories based on characteristics, properties, or the nature of the process:\n\n1. Primary Category — The most fundamental form studied at this level.\n2. Secondary Category — Variations or subcategories with distinct properties.\n3. Applied Category — How the concept is applied in practical, real-world contexts.\n\nThe NCERT textbook for Class ${grade} ${sub} covers each of these categories with examples and diagrams that help students visualise the differences clearly.`
+      },
+      {
+        slideNumber: 5, type: 'theory',
+        heading: `Importance and Applications`,
+        content: `${topicName} plays a significant role in both nature and human life:\n\n1. Scientific Importance — It explains natural phenomena observed in the environment.\n2. Technological Applications — Understanding ${topicName} has led to practical inventions and innovations.\n3. Environmental Significance — It has a direct or indirect impact on ecosystems and living organisms.\n4. Economic Value — Industries and agriculture benefit from knowledge of ${topicName}.\n5. Educational Importance — It provides the conceptual base for advanced topics in Class ${grade + 1} and beyond.`
+      },
+      {
+        slideNumber: 6, type: 'summary',
+        heading: `Summary and Review`,
+        content: `Key takeaways from today's lesson on ${topicName}:\n\n✓ ${topicName} is a core concept in Class ${grade} ${sub} (NCERT).\n✓ It is defined by its fundamental properties and scientific principles.\n✓ It can be classified into different types based on its characteristics.\n✓ It has important applications in science, technology and everyday life.\n✓ Understanding ${topicName} thoroughly is essential for board exams.\n\nRevision tip: Re-read the NCERT chapter, draw diagrams from memory, and practice the chapter-end questions to solidify your understanding.`
+      }
+    ];
+  };
+
+  // ── Try AI first (5s timeout, no blocking retry) ──────────────────────────
+  const slidesPrompt = `You are a VIDYA AI teacher for Indian schools (NCERT curriculum). Generate exactly 6 theory-only classroom lecture slides for the following:
+
+Topic: "${actualTopic}"
+Subject: "${actualSubject}"
+Chapter: "${actualChapter}"
+Class Level: Class ${cl}
+Language: ${langName}
+
+STRICT RULES:
+1. ALL content MUST be in ${langName} language.
+2. ONLY pure theory content — no random facts, no activities, no jokes.
+3. Follow NCERT Class ${cl} curriculum structure exactly.
+4. Each slide must be self-contained and educational.
+5. Slide types must follow: intro → definition → core_theory → types → importance → summary
+
+Return ONLY valid JSON (no markdown, no ticks):
+{
+  "slides": [
+    { "slideNumber": 1, "type": "intro", "heading": "heading in ${langName}", "content": "3-5 sentences of pure theory in ${langName}" },
+    { "slideNumber": 2, "type": "definition", "heading": "heading in ${langName}", "content": "3-5 sentences in ${langName}" },
+    { "slideNumber": 3, "type": "core_theory", "heading": "heading in ${langName}", "content": "4-6 sentences in ${langName}" },
+    { "slideNumber": 4, "type": "types", "heading": "heading in ${langName}", "content": "4-6 sentences listing types/classification in ${langName}" },
+    { "slideNumber": 5, "type": "importance", "heading": "heading in ${langName}", "content": "3-5 sentences on importance/applications in ${langName}" },
+    { "slideNumber": 6, "type": "summary", "heading": "heading in ${langName}", "content": "Summary with 5 key bullet points in ${langName}" }
+  ]
+}`;
+
+  const aiResp = await queryLLMChain(`VoiceSlides:${actualTopic}:${langName}`, slidesPrompt, 5000);
+  if (aiResp) {
+    try {
+      let clean = aiResp.text.trim();
+      if (clean.startsWith('```json')) clean = clean.slice(7);
+      if (clean.startsWith('```')) clean = clean.slice(3);
+      if (clean.endsWith('```')) clean = clean.slice(0, -3);
+      const parsed = JSON.parse(clean.trim());
+      if (parsed.slides && Array.isArray(parsed.slides) && parsed.slides.length >= 4) {
+        return res.json({ success: true, provider: aiResp.provider, topic: actualTopic, slides: parsed.slides });
+      }
+    } catch (e) {
+      console.error('Failed to parse slides from AI:', e.message);
+    }
+  }
+
+  // ── Rich fallback slides (with translation if needed) ────────────────────
+  const fallbackSlides = buildFallbackSlides(actualTopic, cl, actualSubject, lang);
+
+  // Language code map for MyMemory API
+  const MY_MEMORY_LANG_MAP = {
+    hi: 'hi', mr: 'mr', bn: 'bn', ta: 'ta', te: 'te',
+    kn: 'kn', ml: 'ml', gu: 'gu', pa: 'pa', ur: 'ur',
+    or: 'or', as: 'as', sa: 'sa', ne: 'ne', sd: 'sd',
+    kok: 'kok', mai: 'hi', doi: 'hi', brx: 'bn', ks: 'ur', mni: 'bn'
+  };
+
+  // Only translate if language is not English
+  if (lang !== 'en' && MY_MEMORY_LANG_MAP[lang]) {
+    const targetLang = MY_MEMORY_LANG_MAP[lang];
+
+    const translateText = async (text) => {
+      try {
+        const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|${targetLang}&de=vidyaai@education.in`;
+        const r = await fetch(url, { signal: AbortSignal.timeout(4000) });
+        const d = await r.json();
+        if (d.responseStatus === 200 && d.responseData?.translatedText) {
+          return d.responseData.translatedText;
+        }
+        return text;
+      } catch {
+        return text;
+      }
+    };
+
+    try {
+      console.log(`Translating ${fallbackSlides.length} slides to ${langName} sequentially...`);
+      const translatedSlides = [];
+      for (const slide of fallbackSlides) {
+        try {
+          const combined = `${slide.heading} | ${slide.content}`;
+          const translated = await translateText(combined);
+          const parts = translated.split('|');
+          const tHeading = parts[0]?.trim() || slide.heading;
+          const tContent = parts.slice(1).join('|').trim() || slide.content;
+          translatedSlides.push({ ...slide, heading: tHeading, content: tContent });
+        } catch {
+          translatedSlides.push(slide);
+        }
+        await new Promise(r => setTimeout(r, 150)); // 150ms delay to avoid rate limit
+      }
+      console.log(`Translation to ${langName} complete.`);
+      return res.json({
+        success: true,
+        provider: 'local_fallback_translated',
+        topic: actualTopic,
+        slides: translatedSlides
+      });
+    } catch (e) {
+      console.error('Translation failed, returning English fallback:', e.message);
+    }
+  }
+
+  res.json({
+    success: true,
+    provider: 'local_fallback',
+    topic: actualTopic,
+    slides: fallbackSlides
+  });
+});
+
+
+// ── PRACTICE QUESTIONS ENDPOINT ──────────────────────────────────────────────
+// Generates 8 MCQ practice questions on a topic in the selected language
+app.post('/api/learning/practice/questions', async (req, res) => {
+  const { topic, classLevel, language, subject, chapter } = req.body;
+  const lang = language || 'en';
+  const langName = LANG_NAMES[lang] || 'English';
+  const cl = classLevel || 8;
+  const actualTopic = topic || 'Photosynthesis';
+  const actualSubject = subject || 'Science';
+  const actualChapter = chapter || '';
+
+  // ── English fallback question bank ────────────────────────────────────────
+  const buildFallbackQuestions = (topicName, grade, sub) => {
+    const topicLower = topicName.toLowerCase();
+
+    // Photosynthesis specific
+    if (topicLower.includes('photosynthesis') || topicLower.includes('photo')) {
+      return [
+        { questionNumber:1, type:'mcq', question:'What is photosynthesis?', options:['A) Breakdown of glucose for energy', 'B) Process by which plants make food using sunlight', 'C) Absorption of minerals from soil', 'D) Exchange of gases only'], correctOption:'B', explanation:'Photosynthesis is the process by which green plants use sunlight, water and CO₂ to prepare food (glucose). It is described in NCERT Class 8 Chapter: How Do Organisms Reproduce.' },
+        { questionNumber:2, type:'mcq', question:'What is the chemical equation for photosynthesis?', options:['A) C₆H₁₂O₆ + O₂ → CO₂ + H₂O', 'B) 6CO₂ + 6H₂O + Light → C₆H₁₂O₆ + 6O₂', 'C) CO₂ + H₂O → CH₄ + O₂', 'D) 6O₂ + 6H₂O → C₆H₁₂O₆ + CO₂'], correctOption:'B', explanation:'The correct equation is: 6CO₂ + 6H₂O + Light Energy → C₆H₁₂O₆ + 6O₂. Plants absorb CO₂ and water and produce glucose and oxygen.' },
+        { questionNumber:3, type:'mcq', question:'Where does photosynthesis primarily occur?', options:['A) In the roots of the plant', 'B) In the stem of the plant', 'C) In the chloroplasts inside leaf cells', 'D) In the flower petals'], correctOption:'C', explanation:'Photosynthesis occurs in the chloroplasts, which contain the green pigment chlorophyll. Leaves are the main site because they are flat and have maximum surface area.' },
+        { questionNumber:4, type:'mcq', question:'Which pigment in leaves captures sunlight for photosynthesis?', options:['A) Melanin', 'B) Carotene', 'C) Haemoglobin', 'D) Chlorophyll'], correctOption:'D', explanation:'Chlorophyll is the green pigment found in chloroplasts that captures light energy from the sun and uses it to power the photosynthesis reaction.' },
+        { questionNumber:5, type:'mcq', question:'What are the three raw materials needed for photosynthesis?', options:['A) Glucose, oxygen, water', 'B) Carbon dioxide, water, and light energy', 'C) Nitrogen, oxygen, and sunlight', 'D) Minerals, water, and carbon monoxide'], correctOption:'B', explanation:'The three essential raw materials are: (1) Carbon Dioxide — from air via stomata, (2) Water — from soil via roots, and (3) Light Energy — from the sun captured by chlorophyll.' },
+        { questionNumber:6, type:'mcq', question:'Which of the following is a product of photosynthesis?', options:['A) Carbon dioxide and water', 'B) Nitrogen gas and glucose', 'C) Glucose and oxygen', 'D) Starch and carbon dioxide'], correctOption:'C', explanation:'Photosynthesis produces Glucose (C₆H₁₂O₆) — stored as food for the plant — and Oxygen (O₂) — released into the air as a by-product through stomata.' },
+        { questionNumber:7, type:'mcq', question:'Which factor does NOT affect the rate of photosynthesis?', options:['A) Light intensity', 'B) CO₂ concentration', 'C) The gardener\'s age', 'D) Temperature'], correctOption:'C', explanation:'The gardener\'s age has no effect. The actual limiting factors are light intensity, CO₂ concentration, temperature, and water availability — all described in NCERT.' },
+        { questionNumber:8, type:'mcq', question:'What is the significance of photosynthesis for the atmosphere?', options:['A) It increases CO₂ levels', 'B) It removes oxygen from air', 'C) It replenishes oxygen and reduces CO₂ in the atmosphere', 'D) It has no effect on atmospheric composition'], correctOption:'C', explanation:'Photosynthesis is crucial because it removes CO₂ (a greenhouse gas) from the atmosphere and releases O₂, maintaining the atmospheric balance that supports all aerobic life.' }
+      ];
+    }
+
+    // Agricultural implements specific
+    if (topicLower.includes('agricultural') || topicLower.includes('implement') || topicLower.includes('farm')) {
+      return [
+        { questionNumber:1, type:'mcq', question:'What are agricultural implements?', options:['A) Only traditional wooden tools used by farmers', 'B) Tools, equipment and machines used to perform farming operations', 'C) Chemicals used to improve crop yield', 'D) Seeds used for sowing'], correctOption:'B', explanation:'Agricultural implements are tools, equipment and machines used by farmers to perform various farming operations such as ploughing, sowing, irrigating and harvesting.' },
+        { questionNumber:2, type:'mcq', question:'Which implement is used for ploughing the soil?', options:['A) Sickle', 'B) Seed Drill', 'C) Plough (Hala)', 'D) Thresher'], correctOption:'C', explanation:'The Plough (Hala) is used for ploughing — loosening and turning over the topsoil to prepare it for sowing. It is one of the most ancient agricultural tools used in India.' },
+        { questionNumber:3, type:'mcq', question:'What is the function of a Seed Drill?', options:['A) To water the crops', 'B) To harvest mature crops', 'C) To sow seeds at uniform depth and spacing', 'D) To remove weeds from the field'], correctOption:'C', explanation:'A Seed Drill sows seeds at uniform depth and spacing automatically, improving germination rates and saving seed compared to broadcasting by hand.' },
+        { questionNumber:4, type:'mcq', question:'Which machine performs reaping, threshing and winnowing in one pass?', options:['A) Tractor', 'B) Power Tiller', 'C) Combine Harvester', 'D) Seed Drill'], correctOption:'C', explanation:'The Combine Harvester performs three operations in one machine pass: reaping (cutting), threshing (separating grain from stalk), and winnowing (removing husk). It saves enormous time and labour.' },
+        { questionNumber:5, type:'mcq', question:'What is the purpose of a Thresher?', options:['A) To plough the soil', 'B) To separate grain from the stalk and husk', 'C) To water crops using sprinklers', 'D) To transport crops to market'], correctOption:'B', explanation:'A Thresher is used after harvesting to separate the grain from the stalk, leaves and husk. It can be manually operated or powered by a tractor.' },
+        { questionNumber:6, type:'mcq', question:'Which irrigation implement saves the most water by delivering it directly to plant roots?', options:['A) Flood irrigation channels', 'B) Persian Wheel (Rahat)', 'C) Drip Irrigation System', 'D) Sprinkler watering can'], correctOption:'C', explanation:'Drip Irrigation delivers water directly to plant roots through pipes and drippers, saving up to 60% water compared to flood irrigation. It is the most water-efficient method.' },
+        { questionNumber:7, type:'mcq', question:'Which hand tool is most commonly used for cutting grain crops like wheat and rice?', options:['A) Hoe', 'B) Cultivator', 'C) Sickle', 'D) Plough'], correctOption:'C', explanation:'The Sickle is a C-shaped blade on a wooden handle, widely used in India for cutting (reaping) standing grain crops like wheat, rice and paddy during harvest.' },
+        { questionNumber:8, type:'mcq', question:'The Persian Wheel (Rahat) is used for which agricultural purpose?', options:['A) Ploughing fields', 'B) Harvesting crops', 'C) Lifting water from wells for irrigation', 'D) Removing weeds from fields'], correctOption:'C', explanation:'The Persian Wheel (Rahat) is an animal-powered water-lifting device historically used in northern India to lift water from wells or ponds for irrigating fields.' }
+      ];
+    }
+
+    // Generic questions for any topic
+    return Array.from({ length: 8 }, (_, i) => ({
+      questionNumber: i + 1, type: 'mcq',
+      question: `According to NCERT Class ${grade} ${sub}, which of the following correctly describes an important aspect of ${topicName}? (Question ${i + 1})`,
+      options: [
+        `A) ${topicName} is a process that converts energy into matter`,
+        `B) ${topicName} is the core concept described in NCERT Class ${grade} ${sub}`,
+        `C) ${topicName} is unrelated to the chapter's main theme`,
+        `D) ${topicName} was discovered in the 20th century only`
+      ],
+      correctOption: 'B',
+      explanation: `Option B is correct. According to the NCERT textbook for Class ${grade} ${sub}, ${topicName} is the core concept of this chapter that students must master for board examinations and conceptual understanding.`
+    }));
+  };
+
+  // ── Translation helper ────────────────────────────────────────────────────
+  const MY_MEMORY_MAP = { hi:'hi', mr:'mr', bn:'bn', ta:'ta', te:'te', kn:'kn', ml:'ml', gu:'gu', pa:'pa', ur:'ur', or:'or', as:'as', sa:'sa', ne:'ne', sd:'sd', kok:'kok', mai:'hi', doi:'hi', brx:'bn', ks:'ur', mni:'bn' };
+
+  const translateText = async (text, targetCode) => {
+    try {
+      const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|${targetCode}&de=vidyaai@education.in`;
+      const r = await fetch(url, { signal: AbortSignal.timeout(4000) });
+      const d = await r.json();
+      if (d.responseStatus === 200 && d.responseData?.translatedText) {
+        return d.responseData.translatedText;
+      }
+      return text;
+    } catch {
+      return text;
+    }
+  };
+
+  // ── Try AI first ──────────────────────────────────────────────────────────
+  const aiPrompt = `You are VIDYA AI, an NCERT curriculum expert for Indian schools. Generate exactly 8 multiple-choice practice questions (MCQ) on the following topic:
+
+Topic: "${actualTopic}"
+Subject: "${actualSubject}"  
+Chapter: "${actualChapter}"
+Class Level: Class ${cl}
+Language: ${langName}
+
+STRICT RULES:
+1. ALL content MUST be in ${langName}.
+2. Questions must be based on NCERT Class ${cl} ${actualSubject} curriculum only.
+3. Each question must have exactly 4 options (A, B, C, D).
+4. Include a clear explanation for the correct answer.
+5. Difficulty: Mix of easy (2), medium (4), hard (2) questions.
+
+Return ONLY valid JSON (no markdown, no ticks):
+{
+  "questions": [
+    {
+      "questionNumber": 1,
+      "type": "mcq",
+      "question": "Question text in ${langName}",
+      "options": ["A) option in ${langName}", "B) option in ${langName}", "C) option in ${langName}", "D) option in ${langName}"],
+      "correctOption": "A",
+      "explanation": "Explanation in ${langName}"
+    }
+  ]
+}`;
+
+  const aiResp = await queryLLMChain(`PracticeQ:${actualTopic}:${langName}`, aiPrompt, 6000);
+  if (aiResp) {
+    try {
+      let clean = aiResp.text.trim();
+      if (clean.startsWith('```json')) clean = clean.slice(7);
+      if (clean.startsWith('```')) clean = clean.slice(3);
+      if (clean.endsWith('```')) clean = clean.slice(0, -3);
+      const parsed = JSON.parse(clean.trim());
+      if (parsed.questions && Array.isArray(parsed.questions) && parsed.questions.length >= 4) {
+        return res.json({ success: true, provider: aiResp.provider, topic: actualTopic, questions: parsed.questions });
+      }
+    } catch (e) { console.error('Failed to parse practice questions from AI:', e.message); }
+  }
+
+  // ── Fallback: English questions + translate if needed ─────────────────────
+  const fallbackQs = buildFallbackQuestions(actualTopic, cl, actualSubject);
+
+  if (lang !== 'en' && MY_MEMORY_MAP[lang]) {
+    const targetCode = MY_MEMORY_MAP[lang];
+    try {
+      console.log(`Translating ${fallbackQs.length} questions to ${langName} sequentially...`);
+      const translatedQs = [];
+      for (const q of fallbackQs) {
+        try {
+          const combined = `${q.question} | ${q.options[0]} | ${q.options[1]} | ${q.options[2]} | ${q.options[3]} | ${q.explanation}`;
+          const translated = await translateText(combined, targetCode);
+          const parts = translated.split('|');
+          const tQ = parts[0]?.trim() || q.question;
+          const tA = parts[1]?.trim() || q.options[0];
+          const tB = parts[2]?.trim() || q.options[1];
+          const tC = parts[3]?.trim() || q.options[2];
+          const tD = parts[4]?.trim() || q.options[3];
+          const tExp = parts.slice(5).join('|').trim() || q.explanation;
+          translatedQs.push({
+            ...q,
+            question: tQ,
+            options: [tA, tB, tC, tD],
+            explanation: tExp
+          });
+        } catch {
+          translatedQs.push(q);
+        }
+        await new Promise(r => setTimeout(r, 150)); // 150ms gap
+      }
+      return res.json({ success: true, provider: 'local_fallback_translated', topic: actualTopic, questions: translatedQs });
+    } catch (e) { console.error('Question translation failed:', e.message); }
+  }
+
+  res.json({ success: true, provider: 'local_fallback', topic: actualTopic, questions: fallbackQs });
 });
 
 // 4. Feynman Socratic Discussion
@@ -1981,6 +3236,113 @@ app.post('/api/learning/rag-search', async (req, res) => {
     success: true,
     provider: "local_mock_backup",
     results: mockChapters
+  });
+});
+
+// ----------------------------------------------------
+// 📝 PRACTICE QUESTIONS ENDPOINT (MULTILINGUAL)
+// ----------------------------------------------------
+app.post('/api/learning/practice/questions', async (req, res) => {
+  const { topic, language, classLevel, subject, chapter, difficulty, numQuestions } = req.body;
+
+  const cl = classLevel || 8;
+  const lang = language || 'en';
+  const langName = LANG_NAMES[lang] || 'English';
+  const actualTopic = topic || 'General Science';
+  const actualSubject = subject || 'Science';
+  const actualChapter = chapter || '';
+  const diff = ['easy', 'medium', 'hard'].includes(difficulty) ? difficulty : 'medium';
+  const nq = Math.min(Math.max(parseInt(numQuestions) || 8, 5), 20);
+
+  const diffDescriptions = {
+    easy:   `Basic recall and definitions. \"What is\" and simple fact questions. Class ${cl} foundational level. One clearly correct answer.`,
+    medium: `Application and understanding. \"Why/How\" type questions. Connect concepts. NCERT Class ${cl} standard level. Requires some reasoning.`,
+    hard:   `Analysis, synthesis and HOTS (Higher Order Thinking Skills). Tricky distractors. Advanced Class ${cl} level. Requires deep understanding.`
+  };
+
+  const systemPrompt = `You are a NCERT curriculum practice question generator for Indian school students.
+
+CRITICAL LANGUAGE INSTRUCTION: ALL question text, ALL option text, and ALL explanation text MUST be written ENTIRELY in ${langName}. Do NOT use English unless the selected language IS English. Use the native script (Devanagari for Hindi, Assamese script for Assamese, Tamil script for Tamil, Bengali script for Bengali, Telugu script for Telugu, etc.). This is MANDATORY — failure to use ${langName} script is unacceptable.
+
+Generate exactly ${nq} practice questions on the topic "${actualTopic}" from NCERT Class ${cl} subject "${actualSubject}"${actualChapter ? `, chapter "${actualChapter}"` : ''}.
+
+Difficulty Level: ${diff.toUpperCase()}
+Difficulty Description: ${diffDescriptions[diff]}
+
+Rules:
+- Every single word of questions, options and explanations MUST be in ${langName}
+- Questions must be curriculum-accurate for Class ${cl} NCERT
+- Include a mix: at least ${Math.ceil(nq * 0.6)} MCQ, rest can be True/False or fill-in-blank
+- 4 options per MCQ labeled A), B), C), D)
+- correctOption must be 'A', 'B', 'C', or 'D' (just the letter)
+- No repeated questions
+- For 'hard' difficulty: use tricky distractors and higher-order thinking
+
+Return ONLY a valid JSON array (no markdown, no extra text):
+[
+  {
+    "questionNumber": 1,
+    "type": "mcq",
+    "question": "Question text entirely in ${langName}",
+    "options": ["A) Option A in ${langName}", "B) Option B in ${langName}", "C) Option C in ${langName}", "D) Option D in ${langName}"],
+    "correctOption": "A",
+    "explanation": "Explanation in ${langName}"
+  }
+]`;
+
+  const llmResponse = await queryLLMChain(
+    `PracticeQ:${cl}:${actualSubject}:${actualTopic}:${lang}:${diff}:${nq}`,
+    systemPrompt,
+    10000
+  );
+
+  if (llmResponse) {
+    try {
+      let cleanText = llmResponse.text.trim();
+      if (cleanText.startsWith('```json')) cleanText = cleanText.slice(7);
+      if (cleanText.startsWith('```')) cleanText = cleanText.slice(3);
+      if (cleanText.endsWith('```')) cleanText = cleanText.slice(0, -3);
+      const parsed = JSON.parse(cleanText.trim());
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return res.json({ success: true, provider: llmResponse.provider, questions: parsed });
+      }
+    } catch (e) {
+      console.error('Failed to parse practice questions LLM response:', e.message);
+    }
+  }
+
+  // Language-aware fallback question templates
+  const fallbackTemplates = {
+    en: (t, s, cl) => ([
+      { questionNumber: 1, type: 'mcq', question: `What is the primary purpose of ${t} in ${s}?`, options: ['A) To store energy', 'B) To perform the core function described by NCERT', 'C) To release waste products', 'D) To absorb minerals from soil'], correctOption: 'B', explanation: `According to NCERT Class ${cl} ${s}, the primary purpose is the core function that defines ${t}.` },
+      { questionNumber: 2, type: 'mcq', question: `Which of the following is NOT related to ${t}?`, options: ['A) Core process of the concept', 'B) Main component involved', 'C) An unrelated external factor', 'D) Key product or output'], correctOption: 'C', explanation: `The unrelated external factor is not covered in the ${t} chapter of Class ${cl} ${s}.` },
+      { questionNumber: 3, type: 'mcq', question: `Where does ${t} primarily occur in the organism or system?`, options: ['A) Only on the external surface', 'B) In the core organ or organelle described by NCERT', 'C) Only in blood or body fluid', 'D) In the external environment'], correctOption: 'B', explanation: `NCERT states that ${t} occurs in the specific organ or organelle designated for this process in Class ${cl} ${s}.` },
+      { questionNumber: 4, type: 'mcq', question: `What are the main raw materials required for ${t}?`, options: ['A) Only water and mineral salts', 'B) Only sunlight and air', 'C) The specific inputs defined in NCERT for this process', 'D) Only soil minerals'], correctOption: 'C', explanation: `The NCERT textbook for Class ${cl} lists the specific raw materials for ${t}.` },
+      { questionNumber: 5, type: 'mcq', question: `What is the main output of ${t}?`, options: ['A) Carbon dioxide and heat only', 'B) The primary product described in NCERT', 'C) Mineral salts only', 'D) Nothing — it is a passive process'], correctOption: 'B', explanation: `According to NCERT Class ${cl} ${s}, ${t} produces the primary product central to this concept.` },
+      { questionNumber: 6, type: 'mcq', question: `Which factor does NOT affect the rate of ${t}?`, options: ['A) Temperature', 'B) Availability of raw materials', "C) The observer's clothing colour", 'D) Light intensity or pressure'], correctOption: 'C', explanation: `The observer's clothing colour is irrelevant. Actual factors are temperature, raw materials, and light or pressure.` },
+      { questionNumber: 7, type: 'mcq', question: `Why is ${t} important for living organisms and the environment?`, options: ['A) It has no real importance', 'B) It provides the core benefit described in NCERT', 'C) It only benefits non-living matter', 'D) It destroys environmental balance'], correctOption: 'B', explanation: `NCERT highlights ${t} as important because it provides the core benefit that sustains life and the environment.` },
+      { questionNumber: 8, type: 'mcq', question: `According to NCERT Class ${cl}, ${t} can be classified into how many main types?`, options: ['A) Only one type', 'B) Exactly two main types', 'C) Multiple types as described in the chapter', 'D) No classification exists'], correctOption: 'C', explanation: `NCERT describes multiple types of ${t} based on characteristics, mechanisms, or applications in Class ${cl} ${s}.` },
+    ]),
+    hi: (t, s, cl) => ([
+      { questionNumber: 1, type: 'mcq', question: `${s} में ${t} का मुख्य उद्देश्य क्या है?`, options: ['A) ऊर्जा संग्रहीत करना', 'B) NCERT द्वारा वर्णित मुख्य कार्य करना', 'C) अपशिष्ट उत्पाद छोड़ना', 'D) मिट्टी से खनिज अवशोषित करना'], correctOption: 'B', explanation: `NCERT कक्षा ${cl} ${s} के अनुसार, ${t} का मुख्य उद्देश्य वह मुख्य कार्य है जो इस अवधारणा को परिभाषित करता है।` },
+      { questionNumber: 2, type: 'mcq', question: `निम्नलिखित में से कौन सा ${t} से संबंधित नहीं है?`, options: ['A) अवधारणा की मुख्य प्रक्रिया', 'B) इसमें शामिल मुख्य घटक', 'C) एक असंबंधित बाहरी कारक', 'D) मुख्य उत्पाद या आउटपुट'], correctOption: 'C', explanation: `असंबंधित बाहरी कारक कक्षा ${cl} ${s} के ${t} अध्याय में शामिल नहीं है।` },
+      { questionNumber: 3, type: 'mcq', question: `${t} मुख्य रूप से किस अंग या प्रणाली में होता है?`, options: ['A) केवल बाहरी सतह पर', 'B) NCERT द्वारा वर्णित मुख्य अंग या कोशिकांग में', 'C) केवल रक्त या शरीर द्रव में', 'D) बाहरी वातावरण में'], correctOption: 'B', explanation: `NCERT कहता है कि ${t} उस विशेष अंग या कोशिकांग में होता है जो कक्षा ${cl} में इस प्रक्रिया के लिए निर्दिष्ट है।` },
+      { questionNumber: 4, type: 'mcq', question: `${t} के लिए आवश्यक मुख्य कच्चे माल क्या हैं?`, options: ['A) केवल जल और खनिज लवण', 'B) केवल सूर्य का प्रकाश और वायु', 'C) NCERT में इस प्रक्रिया के लिए परिभाषित विशेष सामग्री', 'D) केवल मृदा खनिज'], correctOption: 'C', explanation: `कक्षा ${cl} की NCERT पाठ्यपुस्तक ${t} के लिए विशेष कच्चे माल सूचीबद्ध करती है।` },
+      { questionNumber: 5, type: 'mcq', question: `${t} का मुख्य उत्पाद क्या है?`, options: ['A) केवल कार्बन डाइऑक्साइड और ऊष्मा', 'B) NCERT में वर्णित प्राथमिक उत्पाद', 'C) केवल खनिज लवण', 'D) कुछ नहीं — यह एक निष्क्रिय प्रक्रिया है'], correctOption: 'B', explanation: `NCERT कक्षा ${cl} ${s} के अनुसार, ${t} वह प्राथमिक उत्पाद बनाता है जो इस अवधारणा के केंद्र में है।` },
+      { questionNumber: 6, type: 'mcq', question: `कौन सा कारक ${t} की दर को प्रभावित नहीं करता?`, options: ['A) तापमान', 'B) कच्चे माल की उपलब्धता', 'C) पर्यवेक्षक के वस्त्र का रंग', 'D) प्रकाश की तीव्रता या दबाव'], correctOption: 'C', explanation: `पर्यवेक्षक के वस्त्र का रंग अप्रासंगिक है। वास्तविक कारक तापमान, कच्चे माल और प्रकाश हैं।` },
+      { questionNumber: 7, type: 'mcq', question: `${t} जीवित प्राणियों और पर्यावरण के लिए क्यों महत्वपूर्ण है?`, options: ['A) इसका कोई वास्तविक महत्व नहीं है', 'B) यह NCERT में वर्णित मुख्य लाभ प्रदान करता है', 'C) यह केवल निर्जीव पदार्थ को लाभ देता है', 'D) यह पर्यावरणीय संतुलन को नष्ट करता है'], correctOption: 'B', explanation: `NCERT बताता है कि ${t} जीवन और पर्यावरण को बनाए रखने वाला मुख्य लाभ प्रदान करता है।` },
+      { questionNumber: 8, type: 'mcq', question: `NCERT कक्षा ${cl} के अनुसार, ${t} को कितने मुख्य प्रकारों में वर्गीकृत किया जा सकता है?`, options: ['A) केवल एक प्रकार', 'B) ठीक दो मुख्य प्रकार', 'C) अध्याय में वर्णित अनेक प्रकार', 'D) कोई वर्गीकरण नहीं है'], correctOption: 'C', explanation: `NCERT विभिन्न विशेषताओं, तंत्रों या अनुप्रयोगों के आधार पर ${t} के अनेक प्रकार बताता है।` },
+    ]),
+  };
+
+  // Use language-specific fallback if available, else English
+  const fallbackFn = fallbackTemplates[lang] || fallbackTemplates['en'];
+  const fallbackQuestions = fallbackFn(actualTopic, actualSubject, cl);
+
+  res.json({
+    success: true,
+    provider: 'local_offline',
+    questions: fallbackQuestions
   });
 });
 
