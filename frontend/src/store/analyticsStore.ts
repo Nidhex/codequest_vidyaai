@@ -65,6 +65,10 @@ export interface AnalyticsStats {
     avgSessionDuration: number;
     peakFocusHour: string;
     attentionHistory: number[];
+    averageAttention: number;
+    longestFocusStreak: number;
+    distractionCount: number;
+    activeLearningDuration: number;
   };
   recommendations: Array<{
     type: string;
@@ -118,7 +122,15 @@ export const useAnalyticsStore = create<AnalyticsStore>((set, get) => ({
   weakTopics: [],
   heatmapData: [],
   quizStats: { avgQuizScore: 0, quizAccuracy: 0, hardestSubject: 'None', easiestSubject: 'None', recentQuizHistory: [] },
-  focusStats: { avgSessionDuration: 0, peakFocusHour: 'N/A', attentionHistory: [] },
+  focusStats: {
+    avgSessionDuration: 0,
+    peakFocusHour: 'N/A',
+    attentionHistory: [],
+    averageAttention: 0,
+    longestFocusStreak: 0,
+    distractionCount: 0,
+    activeLearningDuration: 0
+  },
   achievements: DEFAULT_ACHIEVEMENTS,
   notifications: [],
   overallLearningScore: 0,
@@ -151,7 +163,15 @@ export const useAnalyticsStore = create<AnalyticsStore>((set, get) => ({
       weakTopics: [],
       heatmapData: [],
       quizStats: { avgQuizScore: 0, quizAccuracy: 0, hardestSubject: 'None', easiestSubject: 'None', recentQuizHistory: [] },
-      focusStats: { avgSessionDuration: 0, peakFocusHour: 'N/A', attentionHistory: [] },
+      focusStats: {
+        avgSessionDuration: 0,
+        peakFocusHour: 'N/A',
+        attentionHistory: [],
+        averageAttention: 0,
+        longestFocusStreak: 0,
+        distractionCount: 0,
+        activeLearningDuration: 0
+      },
       achievements: DEFAULT_ACHIEVEMENTS.map(ach => ({ ...ach, unlocked: false, unlockedAt: undefined })),
       overallLearningScore: 0,
       rankLabel: 'Beginner Learner'

@@ -92,7 +92,7 @@ export const VoiceClassroom: React.FC<VoiceClassroomProps> = ({ onNavigate }) =>
   const t = TRANSLATIONS[language] || TRANSLATIONS.en;
 
   useEffect(() => {
-    document.title = "AI Voice Practice | VIDYA AI";
+    document.title = "AI Guru | VIDYA AI";
     let metaDesc = document.querySelector('meta[name="description"]');
     if (!metaDesc) {
       metaDesc = document.createElement('meta');

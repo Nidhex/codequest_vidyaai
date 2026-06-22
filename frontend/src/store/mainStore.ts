@@ -137,7 +137,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
     currentScore: 90,
     ear: 0.28,
     isDrowsy: false,
-    attentionHistory: [85, 88, 92, 90, 89, 91, 90]
+    attentionHistory: [90]
   },
   accessibility: {
     dyslexiaMode: false,
@@ -223,14 +223,25 @@ export const useMainStore = create<MainStore>((set, get) => ({
     }
   })),
   updateEngagement: (score, ear, isDrowsy) => set((state) => {
-    const history = [...state.engagement.attentionHistory, score].slice(-15);
+    const now = Date.now();
+    const lastUpdate = (state.engagement as any).lastHistoryUpdate || 0;
+    let newHistory = state.engagement.attentionHistory;
+    let nextUpdateTime = lastUpdate;
+
+    // Throttle history push to every 1.5 seconds (matches simulation tick)
+    if (now - lastUpdate >= 1500) {
+      newHistory = [...state.engagement.attentionHistory, score].slice(-30);
+      nextUpdateTime = now;
+    }
+
     return {
       engagement: {
         currentScore: score,
         ear,
         isDrowsy,
-        attentionHistory: history
-      }
+        attentionHistory: newHistory,
+        lastHistoryUpdate: nextUpdateTime
+      } as any
     };
   }),
   toggleAccessibility: (key) => set((state) => {

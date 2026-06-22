@@ -40,7 +40,7 @@ export const TRANSLATIONS: Record<string, LanguageDict> = {
     lessons: "Lesson Viewer",
     feynmanMode: "Feynman Socratic Mode",
     debateArena: "AI Debate Arena",
-    voiceClassroom: "AI Voice Practice",
+    voiceClassroom: "AI Guru",
     analytics: "Analytics & Focus",
     settings: "Accessibility & Prefs",
     streak: "Streak",

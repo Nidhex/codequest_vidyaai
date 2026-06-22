@@ -4891,6 +4891,55 @@ app.post('/api/learning/activity/log', authenticateToken, (req, res) => {
   }
 });
 
+app.post('/api/learning/attention/session', authenticateToken, (req, res) => {
+  const userId = req.user.id;
+  const { averageAttention, longestFocusStreak, distractionCount, activeLearningDuration, attentionScores } = req.body;
+
+  try {
+    const user = db.getUser(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, error: "User not found" });
+    }
+
+    const currentStats = user.attentionStats || {
+      averageAttention: 0,
+      longestFocusStreak: 0,
+      distractionCount: 0,
+      activeLearningDuration: 0,
+      sessionCount: 0
+    };
+
+    const sessionCount = (currentStats.sessionCount || 0) + 1;
+    const newAverageAttention = Math.round(
+      ((currentStats.averageAttention || 0) * (sessionCount - 1) + (averageAttention || 0)) / sessionCount
+    );
+
+    const updatedStats = {
+      averageAttention: newAverageAttention,
+      longestFocusStreak: Math.max(currentStats.longestFocusStreak || 0, longestFocusStreak || 0),
+      distractionCount: (currentStats.distractionCount || 0) + (distractionCount || 0),
+      activeLearningDuration: (currentStats.activeLearningDuration || 0) + (activeLearningDuration || 0),
+      sessionCount
+    };
+
+    const latestScores = attentionScores || [];
+    const updatedScores = [...(user.attentionScores || []), ...latestScores].slice(-30);
+
+    db.updateUser(userId, {
+      attentionStats: updatedStats,
+      attentionScores: updatedScores
+    });
+
+    // Invalidate compiled analytics cache
+    delete analyticsCache[userId];
+
+    res.json({ success: true, stats: updatedStats });
+  } catch (err) {
+    console.error("Failed to update attention session stats:", err);
+    res.status(500).json({ success: false, error: "Failed to update session telemetry" });
+  }
+});
+
 function compileStudentStats(userId) {
   const logs = db.getStudyLogs(userId);
   const user = db.getUser(userId);
@@ -5118,7 +5167,11 @@ function compileStudentStats(userId) {
     focusTracking: {
       avgSessionDuration,
       peakFocusHour,
-      attentionHistory: user.attentionScores || []
+      attentionHistory: user.attentionScores || [],
+      averageAttention: user.attentionStats?.averageAttention || 0,
+      longestFocusStreak: user.attentionStats?.longestFocusStreak || 0,
+      distractionCount: user.attentionStats?.distractionCount || 0,
+      activeLearningDuration: user.attentionStats?.activeLearningDuration || 0
     },
     recommendations
   };

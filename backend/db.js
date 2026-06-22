@@ -228,6 +228,14 @@ const initialTemplate = {
         History: 40,
         Geography: 60,
         Mathematics: 25
+      },
+      attentionScores: [82, 85, 78, 88, 84, 86, 91],
+      attentionStats: {
+        averageAttention: 84,
+        longestFocusStreak: 12,
+        distractionCount: 2,
+        activeLearningDuration: 45,
+        sessionCount: 1
       }
     },
     {
@@ -397,6 +405,14 @@ module.exports = {
           "Social Science": 0,
           English: 0,
           Hindi: 0
+        },
+        attentionScores: [],
+        attentionStats: {
+          averageAttention: 0,
+          longestFocusStreak: 0,
+          distractionCount: 0,
+          activeLearningDuration: 0,
+          sessionCount: 0
         }
       };
     }

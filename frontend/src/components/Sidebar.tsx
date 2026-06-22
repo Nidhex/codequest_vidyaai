@@ -38,7 +38,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       items: [
         { id: 'landing', label: 'Landing Page', icon: Home },
         { id: 'dashboard', label: 'Student Portal', icon: LayoutDashboard },
-        { id: 'voice', label: 'AI Voice Practice', icon: Volume2 }
+        { id: 'voice', label: 'AI Guru', icon: Volume2 }
       ]
     },
     {

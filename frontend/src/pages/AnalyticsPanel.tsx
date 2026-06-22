@@ -622,7 +622,19 @@ export const AnalyticsPanel: React.FC<AnalyticsPanelProps> = ({ onNavigate }) =>
                     </div>
                     <div className="flex justify-between items-center p-2.5 bg-black/40 rounded-xl border border-cyber-border/15">
                       <span className="text-[10px] text-cyber-text/70">Historical Gaze Avg</span>
-                      <span className="font-bold text-white text-xs">84% Attention</span>
+                      <span className="font-bold text-white text-xs">{focusStats.averageAttention || 0}% Attention</span>
+                    </div>
+                    <div className="flex justify-between items-center p-2.5 bg-black/40 rounded-xl border border-cyber-border/15">
+                      <span className="text-[10px] text-cyber-text/70">Longest Focus Streak</span>
+                      <span className="font-bold text-white text-xs">{focusStats.longestFocusStreak || 0}s</span>
+                    </div>
+                    <div className="flex justify-between items-center p-2.5 bg-black/40 rounded-xl border border-cyber-border/15">
+                      <span className="text-[10px] text-cyber-text/70">Distractions Logged</span>
+                      <span className="font-bold text-white text-xs">{focusStats.distractionCount || 0} times</span>
+                    </div>
+                    <div className="flex justify-between items-center p-2.5 bg-black/40 rounded-xl border border-cyber-border/15">
+                      <span className="text-[10px] text-cyber-text/70">Active Learning Duration</span>
+                      <span className="font-bold text-white text-xs">{focusStats.activeLearningDuration || 0} mins</span>
                     </div>
                   </div>
 
