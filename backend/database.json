@@ -33,11 +33,11 @@
       "email": "aarav@gmail.com",
       "passwordHash": "$2b$10$zLTP3OCKA/R8F6Gw9VX1FejIDh8EmP/a0niki2d50HLR0FpwhUtpO",
       "attentionStats": {
-        "averageAttention": 64,
+        "averageAttention": 50,
         "longestFocusStreak": 14,
-        "distractionCount": 69,
-        "activeLearningDuration": 27,
-        "sessionCount": 23
+        "distractionCount": 78,
+        "activeLearningDuration": 40,
+        "sessionCount": 33
       },
       "attentionScores": [
         0,
@@ -69,7 +69,7 @@
         0,
         0,
         0,
-        0
+        42
       ]
     },
     {
@@ -161,9 +161,9 @@
       "attentionStats": {
         "averageAttention": 52,
         "longestFocusStreak": 33,
-        "distractionCount": 144,
-        "activeLearningDuration": 283,
-        "sessionCount": 283
+        "distractionCount": 156,
+        "activeLearningDuration": 295,
+        "sessionCount": 295
       },
       "attentionScores": [
         0,
