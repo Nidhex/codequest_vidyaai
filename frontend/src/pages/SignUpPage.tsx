@@ -71,8 +71,12 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({ onNavigate }) => {
         onNavigate('dashboard');
       }
     } catch (err: any) {
-      console.error(err);
-      setError(err.message || 'Cognitive profile creation failed.');
+      console.error('Signup error:', err);
+      if (err.name === 'TypeError' && err.message.includes('fetch')) {
+        setError('⚡ Cannot reach server — backend may be offline. Please try again in a moment.');
+      } else {
+        setError(err.message || 'Signup failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }

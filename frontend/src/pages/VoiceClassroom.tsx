@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useMainStore } from '../store/mainStore';
+import { useAnalyticsStore } from '../store/analyticsStore';
 import { TRANSLATIONS, LANGUAGES } from '../store/translations';
 import { CURRICULUM_FALLBACK } from '../store/curriculumFallback';
 import { AvatarTeacher } from '../components/AvatarTeacher';
@@ -71,9 +72,35 @@ const SLIDE_LABEL_COLOR: Record<string, string> = {
   summary:     'text-emerald-300',
 };
 
+// Helper to split text into sentences matching English .!? and regional equivalents like । and newlines
+const splitIntoSentences = (text: string): string[] => {
+  if (!text) return [];
+  const rawParts = text.split(/([.!?।\n]+)/);
+  const result: string[] = [];
+  for (let i = 0; i < rawParts.length; i += 2) {
+    const chunk = rawParts[i]?.trim();
+    const punct = rawParts[i + 1] || '';
+    if (chunk) {
+      result.push(chunk + punct.trim());
+    }
+  }
+  return result.filter(s => s.trim().length > 0);
+};
+
 export const VoiceClassroom: React.FC<VoiceClassroomProps> = ({ onNavigate }) => {
-  const { language, setLanguage, classLevel, setClassLevel, updateXP } = useMainStore();
+  const { language, setLanguage, classLevel, setClassLevel, updateXP, user } = useMainStore();
   const t = TRANSLATIONS[language] || TRANSLATIONS.en;
+
+  useEffect(() => {
+    document.title = "AI Voice Practice | VIDYA AI";
+    let metaDesc = document.querySelector('meta[name="description"]');
+    if (!metaDesc) {
+      metaDesc = document.createElement('meta');
+      metaDesc.setAttribute('name', 'description');
+      document.head.appendChild(metaDesc);
+    }
+    metaDesc.setAttribute('content', 'Experience interactive, voice-enabled Socratic learning in your local language with our holographic AI Teacher.');
+  }, []);
 
   // Curriculum state
   const [gradeLevel, setGradeLevel] = useState(classLevel);
@@ -93,94 +120,342 @@ export const VoiceClassroom: React.FC<VoiceClassroomProps> = ({ onNavigate }) =>
   const [isAnimating, setIsAnimating] = useState(false);
   const [slideDirection, setSlideDirection] = useState<'left'|'right'>('right');
 
-  // Voice
+  // Voice & Narration States
   const [isPlayingAIAudio, setIsPlayingAIAudio] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [isNarrating, setIsNarrating] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [currentSentenceIndex, setCurrentSentenceIndex] = useState(0);
+  const [narrationSpeed, setNarrationSpeed] = useState(1.0);
+  const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [sentences, setSentences] = useState<string[]>([]);
+  const [narrationError, setNarrationError] = useState<string | null>(null);
+
   const recognitionRef = useRef<any>(null);
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const slideContainerRef = useRef<HTMLDivElement | null>(null);
+  const sentencesRef = useRef<string[]>([]);
   const classesList = ["1","2","3","4","5","6","7","8","9","10","11","12"];
 
-  const slide = slides[currentSlide];
-  const accentClass = slide ? (SLIDE_COLORS[slide.type] || SLIDE_COLORS.theory) : '';
-  const labelClass  = slide ? (SLIDE_LABEL_COLOR[slide.type] || 'text-green-300') : '';
-
-  // Typewriter — restarts every time slide changes
-  const typedContent = useTypewriter(slide?.content || '', boardState === 'teaching', 18);
-
-  // ── Curriculum loaders ──────────────────────────────────────────
+  // 1. Fetch subjects when Class Level changes
   useEffect(() => {
-    const load = async () => {
+    const loadSubjects = async () => {
       try {
-        const r = await fetch(`http://localhost:5000/api/curriculum/subjects?classLevel=${gradeLevel}`);
-        const d = await r.json();
-        if (d.success && d.subjects?.length) { setSubjectsList(d.subjects); setSubject(d.subjects[0]); return; }
-      } catch {}
-      const fb = CURRICULUM_FALLBACK[String(gradeLevel)];
-      const subs = fb ? Object.keys(fb.subjects) : ['Science', 'Mathematics'];
-      setSubjectsList(subs); setSubject(subs[0] || '');
+        const res = await fetch(`http://localhost:5000/api/curriculum/subjects?classLevel=${gradeLevel}`);
+        const data = await res.json();
+        if (data.success && data.subjects && data.subjects.length > 0) {
+          setSubjectsList(data.subjects);
+          setSubject(data.subjects[0]);
+          return;
+        }
+      } catch (err) {
+        console.error("Failed to load subjects from API, using fallback", err);
+      }
+      // Fallback
+      const classInfo = CURRICULUM_FALLBACK[String(gradeLevel)];
+      const fallbackSubjects = classInfo ? Object.keys(classInfo.subjects) : ["Mathematics", "Science"];
+      setSubjectsList(fallbackSubjects);
+      setSubject(fallbackSubjects[0] || '');
     };
-    load();
+    loadSubjects();
   }, [gradeLevel]);
 
+  // 2. Fetch chapters when Subject or Class Level changes
   useEffect(() => {
     if (!subject) return;
-    const load = async () => {
+    const loadChapters = async () => {
       try {
-        const r = await fetch(`http://localhost:5000/api/curriculum/chapters?classLevel=${gradeLevel}&subject=${encodeURIComponent(subject)}`);
-        const d = await r.json();
-        if (d.success && d.chapters?.length) { setChaptersList(d.chapters); setChapter(d.chapters[0]); return; }
-      } catch {}
-      const fb = CURRICULUM_FALLBACK[String(gradeLevel)];
-      const chs = fb?.subjects[subject] ? Object.keys(fb.subjects[subject].chapters) : ['Chapter 1'];
-      setChaptersList(chs); setChapter(chs[0] || '');
+        const res = await fetch(`http://localhost:5000/api/curriculum/chapters?classLevel=${gradeLevel}&subject=${encodeURIComponent(subject)}`);
+        const data = await res.json();
+        if (data.success && data.chapters && data.chapters.length > 0) {
+          setChaptersList(data.chapters);
+          setChapter(data.chapters[0]);
+          return;
+        }
+      } catch (err) {
+        console.error("Failed to load chapters from API, using fallback", err);
+      }
+      // Fallback
+      const classInfo = CURRICULUM_FALLBACK[String(gradeLevel)];
+      const fallbackChapters = classInfo?.subjects[subject]
+        ? Object.keys(classInfo.subjects[subject].chapters)
+        : ["Chapter 1: Standard Concept", "Chapter 2: Advanced Concept"];
+      setChaptersList(fallbackChapters);
+      setChapter(fallbackChapters[0] || '');
     };
-    load();
+    loadChapters();
   }, [gradeLevel, subject]);
 
+  // 3. Fetch topics when Chapter, Subject or Class Level changes
   useEffect(() => {
     if (!chapter || !subject) return;
-    const load = async () => {
+    const loadTopics = async () => {
       try {
-        const r = await fetch(`http://localhost:5000/api/curriculum/topics?classLevel=${gradeLevel}&subject=${encodeURIComponent(subject)}&chapter=${encodeURIComponent(chapter)}`);
-        const d = await r.json();
-        if (d.success && d.topics?.length) { setTopicsList(d.topics); setSelectedTopic(d.topics[0]); setTopicInput(d.topics[0]); return; }
-      } catch {}
-      const fb = CURRICULUM_FALLBACK[String(gradeLevel)];
-      const tops = fb?.subjects[subject]?.chapters[chapter] || ['Core Theory', 'Key Applications'];
-      setTopicsList(tops); setSelectedTopic(tops[0] || ''); setTopicInput(tops[0] || '');
+        const res = await fetch(`http://localhost:5000/api/curriculum/topics?classLevel=${gradeLevel}&subject=${encodeURIComponent(subject)}&chapter=${encodeURIComponent(chapter)}`);
+        const data = await res.json();
+        if (data.success && data.topics && data.topics.length > 0) {
+          setTopicsList(data.topics);
+          setSelectedTopic(data.topics[0]);
+          setTopicInput(data.topics[0]);
+          return;
+        }
+      } catch (err) {
+        console.error("Failed to load topics from API, using fallback", err);
+      }
+      // Fallback
+      const classInfo = CURRICULUM_FALLBACK[String(gradeLevel)];
+      const fallbackTopics = classInfo?.subjects[subject]?.chapters[chapter] || ["Core Theory", "Key Applications"];
+      setTopicsList(fallbackTopics);
+      setSelectedTopic(fallbackTopics[0] || '');
+      setTopicInput(fallbackTopics[0] || '');
     };
-    load();
+    loadTopics();
   }, [gradeLevel, subject, chapter]);
 
-  // ── Speech recognition ──────────────────────────────────────────
+  // Web Speech recognition for voice topic input
+  useEffect(() => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      const rec = new SpeechRecognition();
+      rec.continuous = false;
+      rec.interimResults = false;
+      const langCodes: Record<string, string> = {
+        en: 'en-IN', hi: 'hi-IN', gu: 'gu-IN', ta: 'ta-IN', 
+        bn: 'bn-IN', mr: 'mr-IN', te: 'te-IN', ur: 'ur-PK'
+      };
+      rec.lang = langCodes[selectedLanguage] || 'en-IN';
+
+      rec.onstart = () => setIsListening(true);
+      rec.onresult = (e: any) => {
+        const transcript = e.results[0][0].transcript;
+        setTopicInput(transcript.replace(/[.+]/g, ''));
+      };
+      rec.onerror = () => setIsListening(false);
+      rec.onend = () => setIsListening(false);
+      recognitionRef.current = rec;
+    }
+  }, [selectedLanguage]);
+
+  const toggleMic = () => {
+    if (!recognitionRef.current) {
+      alert("Speech recognition not supported in this browser.");
+      return;
+    }
+    if (isListening) {
+      recognitionRef.current.stop();
+    } else {
+      recognitionRef.current.start();
+    }
+  };
+
+  const slide = slides[currentSlide];
+  const accentClass = slide ? (SLIDE_COLORS[slide.type] || SLIDE_COLORS.theory) : '';
+  const labelClass  = slide ? (SLIDE_LABEL_COLOR[slide.type] || 'text-green-300') : '';
+
+  // Typewriter — restarts every time slide changes
+  const typedContent = useTypewriter(slide?.content || '', boardState === 'teaching', 18);
+
+  const bodySentences = useMemo(() => splitIntoSentences(slide?.content || ''), [slide?.content]);
+
+  // Voice Loading Loader
   useEffect(() => {
-    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SR) return;
-    const rec = new SR();
-    rec.continuous = false; rec.interimResults = false;
-    const codes: Record<string,string> = {
+    const loadVoices = () => {
+      if (typeof window !== 'undefined' && window.speechSynthesis) {
+        setAvailableVoices(window.speechSynthesis.getVoices());
+      }
+    };
+    loadVoices();
+    if (typeof window !== 'undefined' && window.speechSynthesis && window.speechSynthesis.onvoiceschanged !== undefined) {
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+    }
+  }, []);
+
+  const getRegionalVoice = useCallback((langCode: string) => {
+    const lc: Record<string, string> = {
       en:'en-IN', hi:'hi-IN', bn:'bn-IN', ta:'ta-IN',
       te:'te-IN', mr:'mr-IN', gu:'gu-IN', kn:'kn-IN',
       ml:'ml-IN', pa:'pa-IN', ur:'ur-PK', or:'or-IN'
     };
-    rec.lang = codes[selectedLanguage] || 'en-IN';
-    rec.onresult = (e: any) => { setTopicInput(e.results[0][0].transcript.replace(/[.+]/g, '')); };
-    rec.onerror = () => setIsListening(false);
-    rec.onend   = () => setIsListening(false);
-    recognitionRef.current = rec;
-  }, [selectedLanguage]);
+    const locale = lc[langCode] || 'en-IN';
+    // Exact match
+    let matchedVoice = availableVoices.find(v => v.lang.toLowerCase() === locale.toLowerCase() || v.lang.toLowerCase().replace('_', '-').startsWith(locale.toLowerCase().split('-')[0]));
+    
+    // Fallback language match
+    if (!matchedVoice) {
+      const shortLang = locale.split('-')[0];
+      matchedVoice = availableVoices.find(v => v.lang.toLowerCase().startsWith(shortLang) || v.name.toLowerCase().includes(shortLang));
+    }
+    return matchedVoice || null;
+  }, [availableVoices]);
 
-  const toggleMic = () => {
-    if (!recognitionRef.current) { alert('Speech recognition not supported.'); return; }
-    if (isListening) { recognitionRef.current.stop(); }
-    else { setIsListening(true); try { recognitionRef.current.start(); } catch {} }
-  };
+  // Scroll active sentence into view
+  const scrollToActiveSentence = useCallback((index: number) => {
+    setTimeout(() => {
+      const activeSpan = document.getElementById(`sentence-${index}`);
+      if (activeSpan && slideContainerRef.current) {
+        activeSpan.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 50);
+  }, []);
 
-  // ── TTS ────────────────────────────────────────────────────────
-  const speakText = useCallback((text: string) => {
+  // Start the voice reading scheduling
+  const speakSentence = useCallback((index: number, list: string[] = sentencesRef.current) => {
+    window.speechSynthesis.cancel();
+    if (index >= list.length) {
+      setIsNarrating(false);
+      setIsPaused(false);
+      setIsPlayingAIAudio(false);
+      setCurrentSentenceIndex(0);
+      utteranceRef.current = null;
+      return;
+    }
+
+    const textToSpeak = list[index];
+    if (!textToSpeak) return;
+
+    const u = new SpeechSynthesisUtterance(textToSpeak);
+    utteranceRef.current = u;
+
+    // Pitch, speed and voice configuration
+    u.rate = narrationSpeed;
+    u.pitch = 1.05;
+    const voice = getRegionalVoice(selectedLanguage);
+    if (voice) {
+      u.voice = voice;
+    }
+    
+    const lc: Record<string, string> = {
+      en:'en-IN', hi:'hi-IN', bn:'bn-IN', ta:'ta-IN',
+      te:'te-IN', mr:'mr-IN', gu:'gu-IN', kn:'kn-IN',
+      ml:'ml-IN', pa:'pa-IN', ur:'ur-PK', or:'or-IN'
+    };
+    u.lang = lc[selectedLanguage] || 'en-IN';
+
+    u.onstart = () => {
+      setIsPlayingAIAudio(true);
+      setCurrentSentenceIndex(index);
+      scrollToActiveSentence(index);
+    };
+
+    u.onend = () => {
+      setIsPlayingAIAudio(false);
+      // Wait a tiny bit between sentences for a natural flow
+      setTimeout(() => {
+        // Read the next sentence if still narrating and not paused
+        if (sentencesRef.current === list) { // Verify list context matches
+          // Read next sentence
+          speakSentence(index + 1, list);
+        }
+      }, 300);
+    };
+
+    u.onerror = (e: any) => {
+      console.error("SpeechSynthesis error:", e);
+      setIsPlayingAIAudio(false);
+      if (e.error !== 'interrupted') {
+        setNarrationError("Voice narration temporarily unavailable. Retrying...");
+        setTimeout(() => setNarrationError(null), 3000);
+        // Advance to next sentence on failure so we don't block
+        setTimeout(() => speakSentence(index + 1, list), 1000);
+      }
+    };
+
+    window.speechSynthesis.speak(u);
+  }, [selectedLanguage, narrationSpeed, getRegionalVoice, scrollToActiveSentence]);
+
+  const startNarration = useCallback((heading: string, content: string) => {
+    if (!heading && !content) return;
+    setNarrationError(null);
+    const bodyParts = splitIntoSentences(content);
+    const list = [heading, ...bodyParts];
+    setSentences(list);
+    sentencesRef.current = list;
+    setIsNarrating(true);
+    setIsPaused(false);
+    
+    // Start with heading at index 0
+    speakSentence(0, list);
+  }, [speakSentence]);
+
+  const handlePauseResume = useCallback(() => {
+    if (!isNarrating) return;
+    if (isPaused) {
+      // Resume
+      window.speechSynthesis.resume();
+      setIsPaused(false);
+      setIsPlayingAIAudio(true);
+    } else {
+      // Pause
+      window.speechSynthesis.pause();
+      setIsPaused(true);
+      setIsPlayingAIAudio(false);
+    }
+  }, [isNarrating, isPaused]);
+
+  const handleStopNarration = useCallback(() => {
     window.speechSynthesis.cancel();
+    setIsNarrating(false);
+    setIsPaused(false);
+    setIsPlayingAIAudio(false);
+    setCurrentSentenceIndex(0);
+    utteranceRef.current = null;
+  }, []);
+
+  const handleReplay = useCallback(() => {
+    if (!isNarrating) return;
+    window.speechSynthesis.cancel();
+    setIsPaused(false);
+    speakSentence(0);
+  }, [isNarrating, speakSentence]);
+
+  const handleSpeedChange = useCallback((speed: number) => {
+    setNarrationSpeed(speed);
+    if (isNarrating && !isPaused) {
+      window.speechSynthesis.cancel();
+      // Re-speak current sentence with the new speed immediately
+      setTimeout(() => {
+        const textToSpeak = sentencesRef.current[currentSentenceIndex];
+        if (!textToSpeak) return;
+        const u = new SpeechSynthesisUtterance(textToSpeak);
+        utteranceRef.current = u;
+        u.rate = speed;
+        u.pitch = 1.05;
+        const voice = getRegionalVoice(selectedLanguage);
+        if (voice) u.voice = voice;
+        const lc: Record<string, string> = {
+          en:'en-IN', hi:'hi-IN', bn:'bn-IN', ta:'ta-IN',
+          te:'te-IN', mr:'mr-IN', gu:'gu-IN', kn:'kn-IN',
+          ml:'ml-IN', pa:'pa-IN', ur:'ur-PK', or:'or-IN'
+        };
+        u.lang = lc[selectedLanguage] || 'en-IN';
+        u.onstart = () => {
+          setIsPlayingAIAudio(true);
+          scrollToActiveSentence(currentSentenceIndex);
+        };
+        u.onend = () => {
+          setIsPlayingAIAudio(false);
+          setTimeout(() => speakSentence(currentSentenceIndex + 1), 300);
+        };
+        u.onerror = (e) => {
+          setIsPlayingAIAudio(false);
+          if (e.error !== 'interrupted') {
+            speakSentence(currentSentenceIndex + 1);
+          }
+        };
+        window.speechSynthesis.speak(u);
+      }, 100);
+    }
+  }, [isNarrating, isPaused, currentSentenceIndex, getRegionalVoice, selectedLanguage, speakSentence, scrollToActiveSentence]);
+
+  // Keep compatibility for older auto-speak or slide navigation speak
+  const speakText = useCallback((text: string) => {
+    handleStopNarration();
     if (!text) return;
     const u = new SpeechSynthesisUtterance(text);
-    const lc: Record<string,string> = {
+    utteranceRef.current = u;
+    const voice = getRegionalVoice(selectedLanguage);
+    if (voice) u.voice = voice;
+    const lc: Record<string, string> = {
       en:'en-IN', hi:'hi-IN', bn:'bn-IN', ta:'ta-IN',
       te:'te-IN', mr:'mr-IN', gu:'gu-IN', kn:'kn-IN',
       ml:'ml-IN', pa:'pa-IN', ur:'ur-PK', or:'or-IN'
@@ -192,19 +467,20 @@ export const VoiceClassroom: React.FC<VoiceClassroomProps> = ({ onNavigate }) =>
     u.onerror = () => setIsPlayingAIAudio(false);
     setIsPlayingAIAudio(true);
     window.speechSynthesis.speak(u);
-  }, [selectedLanguage]);
+  }, [selectedLanguage, getRegionalVoice, handleStopNarration]);
 
-  const stopSpeech = () => { window.speechSynthesis.cancel(); setIsPlayingAIAudio(false); };
+  const stopSpeech = useCallback(() => {
+    handleStopNarration();
+  }, [handleStopNarration]);
 
-  // ── Speak current slide ─────────────────────────────────────────
   const speakCurrentSlide = useCallback((s: Slide) => {
-    speakText(`${s.heading}. ${s.content}`);
-  }, [speakText]);
+    startNarration(s.heading, s.content);
+  }, [startNarration]);
 
   // ── Slide navigation with animation ───────────────────────────
   const goToSlide = (idx: number, dir: 'left'|'right') => {
     if (isAnimating || idx < 0 || idx >= slides.length) return;
-    stopSpeech();
+    handleStopNarration();
     setIsAnimating(true);
     setSlideDirection(dir);
     setTimeout(() => {
@@ -261,7 +537,7 @@ export const VoiceClassroom: React.FC<VoiceClassroomProps> = ({ onNavigate }) =>
         updateXP(20);
         confetti({ particleCount: 60, spread: 65, colors: ['#22c55e','#86efac','#ffffff'], origin: { y: 0.6 } });
         // Auto-speak first slide
-        setTimeout(() => speakText(`${data.slides[0].heading}. ${data.slides[0].content}`), 1000);
+        setTimeout(() => speakCurrentSlide(data.slides[0]), 1000);
       } else {
         throw new Error('No slides returned');
       }
@@ -277,7 +553,7 @@ export const VoiceClassroom: React.FC<VoiceClassroomProps> = ({ onNavigate }) =>
       ];
       setSlides(fallback);
       setBoardState('teaching');
-      setTimeout(() => speakText(`${fallback[0].heading}. ${fallback[0].content}`), 800);
+      setTimeout(() => speakCurrentSlide(fallback[0]), 800);
     }
   };
 
@@ -289,6 +565,28 @@ export const VoiceClassroom: React.FC<VoiceClassroomProps> = ({ onNavigate }) =>
 
   const handleReset = () => {
     stopSpeech(); setSlides([]); setCurrentSlide(0); setBoardState('idle');
+  };
+
+  const handleLessonCompleted = () => {
+    updateXP(100);
+    confetti({
+      particleCount: 80,
+      spread: 60,
+      origin: { y: 0.8 },
+      colors: ['#22c55e', '#a855f7', '#fee440']
+    });
+
+    const focusMinutes = 15;
+    useAnalyticsStore.getState().addActivityLog({
+      userId: user?.id || 'student_1',
+      activityType: 'lesson',
+      subject: subject || 'Science',
+      chapter: chapter || '',
+      topic: topicInput || 'General Lesson',
+      timeSpent: focusMinutes
+    }).catch(err => console.error("addActivityLog failed for Voice Lesson:", err));
+
+    handleReset();
   };
 
   const isLoading  = boardState === 'loading';
@@ -319,7 +617,6 @@ export const VoiceClassroom: React.FC<VoiceClassroomProps> = ({ onNavigate }) =>
 
         {/* LEFT — CONFIG PANEL */}
         <div className="lg:col-span-4 bg-white rounded-3xl border border-slate-100 shadow-sm p-6 flex flex-col gap-4">
-
           {/* Avatar */}
           <div className="flex flex-col items-center gap-1">
             <div className={`relative w-full h-36 rounded-2xl overflow-hidden border-2 transition-all ${
@@ -330,13 +627,40 @@ export const VoiceClassroom: React.FC<VoiceClassroomProps> = ({ onNavigate }) =>
                 <div className="absolute inset-0 border-2 border-green-400/20 rounded-2xl animate-pulse pointer-events-none" />
               )}
             </div>
-            <p className={`text-[9px] font-mono font-bold uppercase tracking-widest ${
-              isPlayingAIAudio ? 'text-green-500 animate-pulse' : 'text-slate-400'
-            }`}>
-              {isPlayingAIAudio ? '🎙 Speaking...' : 'AI TEACHER'}
-            </p>
+            
+            {/* Visualizer Waveform */}
+            {isPlayingAIAudio ? (
+              <div className="flex items-end justify-center gap-0.5 h-6 mt-1.5 px-3 py-1 bg-green-500/10 rounded-full border border-green-500/20 w-fit">
+                <style>{`
+                  @keyframes soundwave {
+                    0%, 100% { transform: scaleY(0.25); }
+                    50% { transform: scaleY(1.2); }
+                  }
+                  .wave-bar {
+                    animation: soundwave 0.8s ease-in-out infinite;
+                    transform-origin: bottom;
+                  }
+                `}</style>
+                {[...Array(10)].map((_, i) => {
+                  const delays = ['0.1s', '0.4s', '0.2s', '0.5s', '0.3s', '0.6s', '0.15s', '0.45s', '0.25s', '0.55s'];
+                  const heights = ['h-2.5', 'h-4', 'h-3.5', 'h-4.5', 'h-3', 'h-4', 'h-3.5', 'h-4.5', 'h-2.5', 'h-3.5'];
+                  return (
+                    <div 
+                      key={i} 
+                      className={`w-0.5 ${heights[i]} bg-green-400 rounded-full wave-bar`} 
+                      style={{ animationDelay: delays[i] }} 
+                    />
+                  );
+                })}
+              </div>
+            ) : (
+              <p className={`text-[9px] font-mono font-bold uppercase tracking-widest ${
+                isPlayingAIAudio ? 'text-green-500 animate-pulse' : 'text-slate-400'
+              } mt-2`}>
+                {isPlayingAIAudio ? '🎙 Speaking...' : 'AI TEACHER'}
+              </p>
+            )}
           </div>
-
           <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
             <Presentation className="w-4 h-4 text-slate-700" />
             <h2 className="text-sm font-outfit font-bold text-slate-800">Start Teaching</h2>
@@ -472,10 +796,10 @@ export const VoiceClassroom: React.FC<VoiceClassroomProps> = ({ onNavigate }) =>
               {/* Board controls */}
               {isTeaching && (
                 <div className="flex items-center gap-2">
-                  {isPlayingAIAudio ? (
-                    <button onClick={stopSpeech}
-                      className="px-3 py-1 text-[9px] font-bold bg-red-500/80 text-white rounded-lg uppercase cursor-pointer flex items-center gap-1">
-                      <Square className="w-2.5 h-2.5" /> Stop
+                  {isNarrating ? (
+                    <button onClick={handleStopNarration}
+                      className="px-3 py-1 text-[9px] font-bold bg-red-500/80 text-white rounded-lg uppercase cursor-pointer flex items-center gap-1 transition-all">
+                      <Square className="w-2.5 h-2.5" /> Stop Voice
                     </button>
                   ) : (
                     <button onClick={() => slide && speakCurrentSlide(slide)}
@@ -487,8 +811,7 @@ export const VoiceClassroom: React.FC<VoiceClassroomProps> = ({ onNavigate }) =>
                     ← → to navigate
                   </span>
                 </div>
-              )}
-            </div>
+              )}            </div>
 
             {/* ── BOARD SURFACE ───────────────────────────────── */}
             <div className="flex-1 flex flex-col relative overflow-hidden">
@@ -558,21 +881,108 @@ export const VoiceClassroom: React.FC<VoiceClassroomProps> = ({ onNavigate }) =>
                         Slide {slide.slideNumber} of {slides.length} — {slide.type.replace(/_/g,' ')}
                       </span>
                     </div>
-                    <h1 className="text-white text-2xl md:text-3xl font-extrabold leading-tight"
-                      style={{ textShadow: '1px 1px 3px rgba(0,0,0,0.6)' }}>
-                      {slide.heading}
+                    <h1 className="text-white text-2xl md:text-3xl font-extrabold leading-tight transition-all"
+                      style={{ textShadow: '1px 1px 3px rgba(0,0,0,0.6)' }}
+                      id="sentence-0"
+                    >
+                      {isNarrating && currentSentenceIndex === 0 ? (
+                        <span className="bg-cyan-500/25 border border-cyan-400/40 rounded px-1.5 py-0.5 text-white shadow-sm shadow-cyan-500/25 font-bold">
+                          {slide.heading}
+                        </span>
+                      ) : (
+                        slide.heading
+                      )}
                     </h1>
                   </div>
 
-                  {/* Content — typewriter */}
-                  <div className="flex-1 overflow-y-auto">
-                    <p className="text-white/90 text-lg leading-relaxed whitespace-pre-line">
-                      {typedContent || slide.content}
-                      {typedContent && typedContent.length < slide.content.length && (
-                        <span className="inline-block w-0.5 h-6 bg-green-400 animate-pulse ml-0.5 align-middle" />
-                      )}
-                    </p>
+                  {/* Content — highlighted spans or typewriter */}
+                  <div ref={slideContainerRef} className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+                    {isNarrating ? (
+                      <div className="text-white/90 text-lg leading-relaxed whitespace-pre-line flex flex-col gap-2">
+                        {bodySentences.map((sentence, idx) => {
+                          const overallIndex = idx + 1; // index 0 is the heading
+                          const isActive = currentSentenceIndex === overallIndex;
+                          return (
+                            <span
+                              key={idx}
+                              id={`sentence-${overallIndex}`}
+                              className={`transition-all duration-300 rounded px-2 py-1 inline-block w-full text-left ${
+                                isActive
+                                  ? 'bg-cyan-500/10 border border-cyan-400/20 text-white font-semibold shadow-[0_0_15px_rgba(6,182,212,0.15)] opacity-100'
+                                  : 'opacity-60 text-white/80'
+                              }`}
+                            >
+                              {sentence}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-white/90 text-lg leading-relaxed whitespace-pre-line">
+                        {typedContent || slide.content}
+                        {typedContent && typedContent.length < slide.content.length && (
+                          <span className="inline-block w-0.5 h-6 bg-green-400 animate-pulse ml-0.5 align-middle" />
+                        )}
+                      </p>
+                    )}
                   </div>
+
+                  {/* Floating / Integrated Voice Playback Control Panel */}
+                  {isNarrating && (
+                    <div className="bg-black/40 border border-white/10 rounded-2xl p-3 flex flex-wrap items-center justify-between gap-3 mt-2 no-print font-mono text-xs text-white">
+                      <div className="flex items-center gap-2">
+                        {/* Play/Pause */}
+                        <button
+                          onClick={handlePauseResume}
+                          className="px-3 py-1.5 rounded-lg bg-green-500/20 text-green-300 border border-green-500/30 hover:bg-green-500/30 transition-all font-bold flex items-center gap-1 cursor-pointer"
+                        >
+                          {isPaused ? <Play className="w-3.5 h-3.5" /> : <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 9v6m4-6v6" /></svg>}
+                          <span>{isPaused ? 'Resume' : 'Pause'}</span>
+                        </button>
+                        
+                        {/* Replay */}
+                        <button
+                          onClick={handleReplay}
+                          className="px-3 py-1.5 rounded-lg bg-blue-500/20 text-blue-300 border border-blue-500/30 hover:bg-blue-500/30 transition-all font-bold flex items-center gap-1 cursor-pointer"
+                        >
+                          <RefreshCw className="w-3.5 h-3.5" />
+                          <span>Replay</span>
+                        </button>
+
+                        {/* Stop */}
+                        <button
+                          onClick={handleStopNarration}
+                          className="px-3 py-1.5 rounded-lg bg-rose-500/20 text-rose-300 border border-rose-500/30 hover:bg-rose-500/30 transition-all font-bold flex items-center gap-1 cursor-pointer"
+                        >
+                          <Square className="w-3.5 h-3.5" />
+                          <span>Stop</span>
+                        </button>
+                      </div>
+
+                      {/* Sentence Tracker */}
+                      <div className="text-[10px] text-white/50 bg-white/5 px-2 py-1 rounded-md border border-white/5 font-mono">
+                        Sentence {currentSentenceIndex} / {sentences.length - 1 || 1}
+                      </div>
+
+                      {/* Speed selectors */}
+                      <div className="flex items-center gap-1">
+                        <span className="text-[10px] text-white/40 uppercase font-bold mr-1">Speed:</span>
+                        {[0.75, 1.0, 1.25, 1.5].map((speed) => (
+                          <button
+                            key={speed}
+                            onClick={() => handleSpeedChange(speed)}
+                            className={`px-2 py-1 rounded-md text-[10px] font-bold border transition-all cursor-pointer ${
+                              narrationSpeed === speed
+                                ? 'bg-cyan-500/25 border-cyan-400/50 text-cyan-300 shadow-[0_0_10px_rgba(6,182,212,0.25)]'
+                                : 'bg-transparent border-white/10 text-white/60 hover:text-white hover:border-white/20'
+                            }`}
+                          >
+                            {speed}x
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -605,14 +1015,25 @@ export const VoiceClassroom: React.FC<VoiceClassroomProps> = ({ onNavigate }) =>
                   ))}
                 </div>
 
-                {/* Next button */}
-                <button
-                  onClick={nextSlide}
-                  disabled={currentSlide === slides.length - 1 || isAnimating}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-green-600/30 border border-green-500/40 text-green-300 hover:bg-green-600/50 disabled:opacity-20 disabled:cursor-not-allowed transition-all cursor-pointer font-mono text-xs font-bold uppercase tracking-wider">
-                  Next
-                  <ChevronRight className="w-4 h-4" />
-                </button>
+                {/* Next / Complete button */}
+                {currentSlide === slides.length - 1 ? (
+                  <button
+                    onClick={handleLessonCompleted}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 border border-emerald-500 text-white hover:bg-emerald-500 hover:shadow-[0_0_15px_rgba(16,185,129,0.4)] transition-all cursor-pointer font-mono text-xs font-bold uppercase tracking-wider animate-pulse"
+                  >
+                    Complete Lesson
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                ) : (
+                  <button
+                    onClick={nextSlide}
+                    disabled={isAnimating}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-green-600/30 border border-green-500/40 text-green-300 hover:bg-green-600/50 disabled:opacity-20 disabled:cursor-not-allowed transition-all cursor-pointer font-mono text-xs font-bold uppercase tracking-wider"
+                  >
+                    Next
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             )}
           </div>

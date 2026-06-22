@@ -48,8 +48,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigate }) => {
         onNavigate('dashboard');
       }
     } catch (err: any) {
-      console.error(err);
-      setError(err.message || 'Verification link timed out. System offline.');
+      console.error('Login error:', err);
+      if (err.name === 'TypeError' && err.message.includes('fetch')) {
+        setError('⚡ Cannot reach server — backend may be offline. Please try again in a moment.');
+      } else {
+        setError(err.message || 'Login failed. Please check your credentials.');
+      }
     } finally {
       setLoading(false);
     }
